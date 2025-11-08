@@ -65,7 +65,7 @@ export default function Welcome() {
             />
             <Dots data={data} scrollX={scrollX} />
             <View style={styles.content}>
-              <Text style={styles.title}>See Beyond the Surface</Text>
+              <Text style={styles.title}>See Beyond the{"\n"}Surface</Text>
               <Text style={styles.tagline}>Gain control over your condition.</Text>
   
               <TouchableOpacity
@@ -209,14 +209,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111',
     textAlign: 'left',
-    marginLeft: '10%',
-    marginTop: 80,
+    marginLeft: -90,
+    marginTop: 50,
+    lineHeight: 34,
   },
   tagline: {
     fontSize: 14,
     color: '#666',
     textAlign: 'left',
-    alignSelf: 'flex-start',
+    marginLeft: -90,
     marginTop: 8,
     marginBottom: 12,
   },
