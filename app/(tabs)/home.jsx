@@ -38,7 +38,7 @@ export default function App() {
 
         <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
           <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/women/44.jpg' }}
+            source={require('../../assets/images/avatar.jpg')}
             style={styles.avatar}
             resizeMode="cover"
           />
