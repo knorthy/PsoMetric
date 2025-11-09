@@ -1,4 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useCallback, useRef, useState } from 'react';
 import {
     Image,
     Platform,
@@ -9,11 +11,24 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import { hp, wp } from '../../helpers/common';
 
 export default function App() {
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topBar}>
@@ -21,13 +36,13 @@ export default function App() {
           <Ionicons name="menu" size={28} color="#333" />
         </TouchableOpacity>
 
-        <View style={styles.avatarContainer}>
+        <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
           <Image
             source={{ uri: 'https://randomuser.me/api/portraits/women/44.jpg' }}
             style={styles.avatar}
             resizeMode="cover"
           />
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Center content wrapper */}
@@ -79,6 +94,34 @@ export default function App() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+
+        <BottomSheetModal
+          ref={sheetRef}
+          snapPoints={snapPoints}
+          enablePanDownToClose={true}
+          onDismiss={() => setisOpen(false)}
+          backdropComponent={(props) => (
+            <BottomSheetBackdrop
+              {...props}
+              appearsOnIndex={0}
+              disappearsOnIndex={-1}
+              opacity={0.45}
+              pressBehavior="close"
+            />
+          )}
+        >
+          <BottomSheetView>
+            <AvatarBottomSheet
+              onPick={(option) => {
+                sheetRef.current?.dismiss();
+                
+              }}
+              onClose={() => sheetRef.current?.dismiss()}
+            />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
