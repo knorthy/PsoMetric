@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     Image,
@@ -19,6 +20,8 @@ export default function SymptomAssessmentScreen() {
   const [gender, setGender] = useState('');
   const [psoriasisHistory, setPsoriasisHistory] = useState('');
   const [age, setAge] = useState('');
+
+  const router = useRouter();
 
   // New multi-select states
   const [location, setLocation] = useState([]);
@@ -164,7 +167,7 @@ export default function SymptomAssessmentScreen() {
           </View>
         </View>
 
-        {/*  SYMPTOM DESCRIPTION SECTION  */}
+        {/* SYMPTOM DESCRIPTION SECTION */}
         <Text style={[styles.sectionTitle, { marginTop: hp(4) }]}>
           Symptom Description
         </Text>
@@ -288,12 +291,21 @@ export default function SymptomAssessmentScreen() {
           </View>
         </View>
 
-        <View style={{ height: hp(6) }} />
+        <View style={{ height: hp(8) }} />
       </ScrollView>
+
+      {/* FAB  */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          router.push('/assess2');
+        }}
+      >
+        <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
@@ -420,5 +432,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     textAlign: 'left',
     fontSize: hp(1.5),
+  },
+
+  /* FAB Bottom Right */
+  fab: {
+    position: 'absolute',
+    right: wp(8),
+    bottom: hp(4),
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 7,
+    zIndex: 1000,
   },
 });
