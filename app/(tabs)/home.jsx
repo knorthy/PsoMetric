@@ -2,14 +2,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useCallback, useRef, useState } from 'react';
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
   },
 
   avatarContainer: {
-    width: wp(8),
-    height: wp(8),
+    width: wp(9),
+    height: wp(9),
     borderRadius: wp(5),
     overflow: 'hidden',
     borderWidth: 1,
