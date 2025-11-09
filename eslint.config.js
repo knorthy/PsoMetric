@@ -7,4 +7,4 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
-]);
+]); // ESLint configuration extending Expo's recommended settings and ignoring the dist directory
