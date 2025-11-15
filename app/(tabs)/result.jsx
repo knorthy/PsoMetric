@@ -1,8 +1,15 @@
 // app/(tabs)/result.jsx
-import { MaterialIcons } from "@expo/vector-icons";
-import { useRef, useState } from "react";
 import {
-  Animated,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  useFonts,
+} from "@expo-google-fonts/poppins";
+import { MaterialIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useState } from "react";
+import {
+  Alert,
   Image,
   Modal,
   SafeAreaView,
@@ -12,11 +19,30 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { hp, wp } from "../../helpers/common";
+import { PieChart } from "react-native-chart-kit";
+import { Circle, G, Svg } from "react-native-svg";
+import { hp, wp } from "../../helpers/common"; // CORRECT PATH
 import { Sidebar } from "./history";
 import { ColorSchemeModal } from "./theme";
 
 const PLACEHOLDER_AVATAR = "https://randomuser.me/api/portraits/women/44.jpg";
+
+// REALISTIC PSORIASIS PLACEHOLDERS
+const PSORIASIS_IMAGES = [
+  "https://images.unsplash.com/photo-1623428187422-7c8d7d8d7d8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1623428187422-7c8d7d8d7d8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1623428187422-7c8d7d8d7d8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1623428187422-7c8d7d8d7d8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+];
+
+export const ASSESSMENT_FORM = {
+  patientName: "Emma Johnson",
+  age: 34,
+  gender: "Female",
+  psoriasisHistory: "first",
+  uploadedImages: PSORIASIS_IMAGES,
+};
+
 const PASI_DATA = {
   total: 12.4,
   severity: "Moderate",
@@ -28,93 +54,127 @@ const PASI_DATA = {
   ],
 };
 
-const RegionRow = ({ region }) => (
-  <View style={styles.regionRow}>
-    <Text style={styles.regionName}>{region.name}</Text>
-    <View style={styles.scores}>
-      <Text style={styles.scoreLabel}>Area</Text>
-      <Text style={styles.scoreValue}>{region.area}%</Text>
-    </View>
-    <View style={styles.scores}>
-      <Text style={styles.scoreLabel}>E</Text>
-      <Text style={styles.scoreValue}>{region.erythema}</Text>
-    </View>
-    <View style={styles.scores}>
-      <Text style={styles.scoreLabel}>I</Text>
-      <Text style={styles.scoreValue}>{region.induration}</Text>
-    </View>
-    <View style={styles.scores}>
-      <Text style={styles.scoreLabel}>S</Text>
-      <Text style={styles.scoreValue}>{region.scaling}</Text>
-    </View>
-    <View style={styles.scores}>
-      <Text style={styles.scoreLabel}>Score</Text>
-      <Text style={styles.scoreValue}>{region.score.toFixed(1)}</Text>
-    </View>
-  </View>
-);
+const getRecommendations = (score) => {
+  if (score < 7) return "Continue current topical therapy. Monitor monthly.";
+  if (score < 12) return "Consider adding calcipotriene or increasing topical potency.";
+  if (score < 20) return "Initiate narrowband UVB phototherapy 2–3x/week. Add emollients.";
+  return "Refer to dermatology for biologic therapy (e.g., adalimumab, secukinumab).";
+};
 
-export default function Result() {
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [showColorScheme, setShowColorScheme] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  const sheetAnim = useRef(new Animated.Value(600)).current;
-  const overlayAnim = useRef(new Animated.Value(0)).current;
-
-  const openModal = () => {
-    setShowImageModal(true);
-    Animated.parallel([
-      Animated.timing(overlayAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.timing(sheetAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(overlayAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-      Animated.timing(sheetAnim, { toValue: 600, duration: 250, useNativeDriver: true }),
-    ]).start(() => setShowImageModal(false));
-  };
-
-  const toggleTheme = () => setIsDark(p => !p);
-  const openColorScheme = () => setShowColorScheme(true);
-  const closeColorScheme = () => setShowColorScheme(false);
-
-  const getSeverityColor = () =>
-    PASI_DATA.total < 10 ? "#4CAF50" : PASI_DATA.total < 20 ? "#FF9800" : "#F44336";
+const ProgressRing = ({ score, size = 140, strokeWidth = 10 }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const progress = (score / 72) * circumference;
+  const color = score < 10 ? "#10B981" : score < 20 ? "#F59E0B" : "#EF4444";
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* HEADER */}
+    <View style={{ width: size, height: size, marginVertical: hp(2.5) }}>
+      <Svg width={size} height={size}>
+        <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
+          <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#E5E7EB" strokeWidth={strokeWidth} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - progress}
+            strokeLinecap="round"
+          />
+        </G>
+      </Svg>
+      <View style={styles.ringCenter}>
+        <Text style={[styles.ringScore, { color }]}>{score.toFixed(1)}</Text>
+        <Text style={styles.ringLabel}>PASI Score</Text>
+      </View>
+    </View>
+  );
+};
+
+export default function Result() {
+  const [fontsLoaded] = useFonts({ Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold });
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showColorScheme, setShowColorScheme] = useState(false);
+
+  if (!fontsLoaded) return null;
+
+  const getSeverityColor = () => PASI_DATA.total < 10 ? "#10B981" : PASI_DATA.total < 20 ? "#F59E0B" : "#EF4444";
+
+  const saveToFiles = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Saved", "Report saved to Files.");
+  };
+
+  const sharePDF = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert("Shared", "Report shared.");
+  };
+
+  const pieData = PASI_DATA.regions.map((r, i) => ({
+    name: r.name,
+    score: r.score,
+    color: ["#1A73E8", "#34A853", "#FBBC04", "#EA4335"][i],
+    legendFontColor: "#555",
+    legendFontSize: wp(3),
+  }));
+
+  // Split into rows of 2
+  const chunkArray = (arr, size) => {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  const imageRows = chunkArray(ASSESSMENT_FORM.uploadedImages, 2);
+
+  return (
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarVisible(true)} style={styles.menuButton}>
-          <MaterialIcons name="menu" size={wp(7)} color="#888" />
+        <TouchableOpacity onPress={() => setSidebarVisible(true)} style={styles.iconButton}>
+          <MaterialIcons name="menu" size={wp(6.5)} color="#666" />
         </TouchableOpacity>
-        <View style={styles.avatarContainer}>
-          <Image source={{ uri: PLACEHOLDER_AVATAR }} style={styles.avatarImage} />
-        </View>
+        <TouchableOpacity style={styles.avatarContainer}>
+          <Image source={{ uri: PLACEHOLDER_AVATAR }} style={styles.avatar} />
+        </TouchableOpacity>
       </View>
 
-      {/* MAIN CONTENT */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>PASI Assessment</Text>
 
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreLabel}>Total PASI Score</Text>
-          <Text style={[styles.totalScore, { color: getSeverityColor() }]}>
-            {PASI_DATA.total.toFixed(1)}
-          </Text>
-          <Text style={[styles.severity, { color: getSeverityColor() }]}>
-            {PASI_DATA.severity} Psoriasis
-          </Text>
+        <View style={styles.ringWrapper}>
+          <ProgressRing score={PASI_DATA.total} />
+          <Text style={[styles.severityText, { color: getSeverityColor() }]}>{PASI_DATA.severity} Psoriasis</Text>
         </View>
 
-        <View style={styles.breakdownCard}>
-          <Text style={styles.breakdownTitle}>Body Region Breakdown</Text>
+        <View style={styles.lightCard}>
+          <Text style={styles.cardTitle}>Score Distribution</Text>
+          <PieChart
+            data={pieData}
+            width={wp(80)}
+            height={hp(25)}
+            chartConfig={{ color: () => "#000" }}
+            accessor="score"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            absolute
+          />
+        </View>
+
+        <View style={styles.lightCard}>
+          <Text style={styles.cardTitle}>Body Region Breakdown</Text>
           {PASI_DATA.regions.map((r, i) => (
-            <RegionRow key={i} region={r} />
+            <View key={i} style={styles.row}>
+              <Text style={styles.regionName}>{r.name}</Text>
+              <View style={styles.scoreGroup}><Text style={styles.scoreLabel}>Area</Text><Text style={styles.scoreValue}>{r.area}%</Text></View>
+              <View style={styles.scoreGroup}><Text style={styles.scoreLabel}>E</Text><Text style={styles.scoreValue}>{r.erythema}</Text></View>
+              <View style={styles.scoreGroup}><Text style={styles.scoreLabel}>I</Text><Text style={styles.scoreValue}>{r.induration}</Text></View>
+              <View style={styles.scoreGroup}><Text style={styles.scoreLabel}>S</Text><Text style={styles.scoreValue}>{r.scaling}</Text></View>
+              <View style={styles.scoreGroup}><Text style={styles.scoreLabel}>Score</Text><Text style={styles.scoreValueBold}>{r.score.toFixed(1)}</Text></View>
+            </View>
           ))}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total PASI</Text>
@@ -122,174 +182,99 @@ export default function Result() {
           </View>
         </View>
 
-        <View style={{ height: hp(15) }} />
+        <View style={styles.lightCard}>
+          <Text style={styles.cardTitle}>Treatment Recommendation</Text>
+          <Text style={styles.recommendText}>{getRecommendations(PASI_DATA.total)}</Text>
+        </View>
+
+        <View style={styles.lightCard}>
+          <Text style={styles.cardTitle}>Your Assessment Summary</Text>
+          <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Name:</Text><Text style={styles.summaryValue}>{ASSESSMENT_FORM.patientName}</Text></View>
+          <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Age:</Text><Text style={styles.summaryValue}>{ASSESSMENT_FORM.age}</Text></View>
+          <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Gender:</Text><Text style={styles.summaryValue}>{ASSESSMENT_FORM.gender}</Text></View>
+          <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Psoriasis History:</Text><Text style={styles.summaryValue}>{ASSESSMENT_FORM.psoriasisHistory === "first" ? "First time onset" : "Recurring"}</Text></View>
+        </View>
+
+        {/* 2 IMAGES PER ROW */}
+        <View style={styles.lightCard}>
+          <Text style={styles.cardTitle}>Affected Areas</Text>
+          {imageRows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.imageRow}>
+              {row.map((uri, colIndex) => {
+                const globalIndex = rowIndex * 2 + colIndex;
+                const label = globalIndex === 0 ? "Elbow" : globalIndex === 1 ? "Knee" : globalIndex === 2 ? "Scalp" : "Back";
+                return (
+                  <View key={colIndex} style={styles.imageItem}>
+                    <Image source={{ uri }} style={styles.uploadedImage} resizeMode="cover" />
+                    <Text style={styles.imageLabel}>{label}</Text>
+                  </View>
+                );
+              })}
+              {row.length === 1 && <View style={styles.imageItem} />}
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionBtn} onPress={saveToFiles}>
+            <MaterialIcons name="folder-open" size={wp(5.5)} color="#1A73E8" />
+            <Text style={styles.actionText}>Save to Files</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={sharePDF}>
+            <MaterialIcons name="share" size={wp(5.5)} color="#1A73E8" />
+            <Text style={styles.actionText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: hp(12) }} />
       </ScrollView>
 
-      {/* UPLOAD BUTTON */}
-      <TouchableOpacity style={styles.uploadButton} onPress={openModal}>
-        <Text style={styles.uploadText}>Upload Images</Text>
-        <View style={styles.uploadIcon}>
-          <MaterialIcons name="upload" size={wp(5.5)} color="white" />
-        </View>
-      </TouchableOpacity>
-
-      {/* SIDEBAR MODAL - BULLETPROOF TAP TO CLOSE */}
-      <Modal visible={sidebarVisible} transparent animationType="none" onRequestClose={() => setSidebarVisible(false)}>
-        <View
-          style={StyleSheet.absoluteFill}
-          onStartShouldSetResponder={() => {
-            setSidebarVisible(false);
-            return true;
-          }}
-          pointerEvents="box-none"
-        />
-
-        <Sidebar
-          visible={sidebarVisible}
-          onClose={() => setSidebarVisible(false)}
-          onThemePress={openColorScheme}
-        />
+      <Modal visible={sidebarVisible} transparent animationType="none">
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setSidebarVisible(false)} />
+        <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} onThemePress={() => setShowColorScheme(true)} />
       </Modal>
 
-      {/* IMAGE MODAL */}
-      <Modal visible={showImageModal} transparent animationType="none" onRequestClose={closeModal}>
-        <View style={styles.modalContainer}>
-          <Animated.View style={[styles.darkOverlay, { opacity: overlayAnim }]} />
-          <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: sheetAnim }] }]}>
-            <View style={styles.sheetContent}>
-              <View style={styles.sheetHandle} />
-              <Text style={styles.modalTitle}>Image Assessment</Text>
-              <TouchableOpacity style={styles.modalPrimaryButton}>
-                <Text style={styles.modalPrimaryText}>Upload Image</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSecondaryButton}>
-                <Text style={styles.modalSecondaryText}>Use Camera</Text>
-              </TouchableOpacity>
-              <Text style={styles.sheetHint}>Ensure good lighting and clear skin view</Text>
-            </View>
-          </Animated.View>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={closeModal} />
-        </View>
-      </Modal>
-
-      {/* THEME MODAL */}
-      <ColorSchemeModal
-        visible={showColorScheme}
-        onClose={closeColorScheme}
-        isDark={isDark}
-        toggleTheme={toggleTheme}
-      />
+      <ColorSchemeModal visible={showColorScheme} onClose={() => setShowColorScheme(false)} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#F9F9F9" },
-  header: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: wp(6),
-    paddingTop: hp(5),
-    paddingBottom: hp(1),
-    backgroundColor: "#F9F9F9",
-    zIndex: 1000,
-  },
-  menuButton: { padding: wp(1) },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: wp(5), paddingTop: hp(6), paddingBottom: hp(1), backgroundColor: "#FFFFFF" },
+  iconButton: { padding: wp(1) },
   avatarContainer: { padding: wp(1) },
-  avatarImage: { width: wp(10), height: wp(10), borderRadius: wp(5), borderWidth: 2.5, borderColor: "#FFF" },
-  scrollContent: { paddingTop: hp(12), paddingHorizontal: wp(6), paddingBottom: hp(10) },
-  title: { fontSize: wp(7), fontWeight: "700", color: "#1A73E8", textAlign: "center", marginBottom: hp(3) },
-  scoreCard: {
-    backgroundColor: "#FFF",
-    padding: wp(5),
-    borderRadius: 20,
-    alignItems: "center",
-    elevation: 3,
-    marginBottom: hp(3),
-  },
-  scoreLabel: { fontSize: wp(4), color: "#666", marginBottom: hp(0.5) },
-  totalScore: { fontSize: wp(12), fontWeight: "800", marginVertical: hp(1) },
-  severity: { fontSize: wp(5), fontWeight: "600" },
-  breakdownCard: {
-    backgroundColor: "#FFF",
-    padding: wp(5),
-    borderRadius: 20,
-    elevation: 2,
-    marginBottom: hp(3),
-  },
-  breakdownTitle: { fontSize: wp(4.8), fontWeight: "700", color: "#333", marginBottom: hp(2) },
-  regionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: hp(1.8),
-    borderBottomWidth: 1,
-    borderColor: "#EEE",
-  },
-  regionName: { flex: 2, fontSize: wp(4), color: "#333", fontWeight: "500" },
-  scores: { flex: 1, alignItems: "center" },
-  scoreValue: { fontSize: wp(4.2), fontWeight: "600", color: "#1A73E8" },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: hp(2),
-    marginTop: hp(1),
-    borderTopWidth: 2,
-    borderColor: "#1A73E8",
-  },
-  totalLabel: { fontSize: wp(4.5), fontWeight: "700", color: "#1A73E8" },
-  totalValue: { fontSize: wp(5), fontWeight: "800", color: "#1A73E8" },
-  uploadButton: {
-    position: "absolute",
-    bottom: hp(3),
-    left: wp(6),
-    right: wp(6),
-    backgroundColor: "#1A73E8",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    height: hp(7.5),
-    borderRadius: 50,
-    elevation: 6,
-    zIndex: 999,
-  },
-  uploadText: { color: "#FFF", fontSize: wp(4.3), fontWeight: "600", marginRight: wp(2) },
-  uploadIcon: {
-    backgroundColor: "rgba(255,255,255,0.25)",
-    width: wp(9),
-    height: wp(9),
-    borderRadius: wp(4.5),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: { flex: 1, justifyContent: "flex-end" },
-  darkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
-  bottomSheet: { backgroundColor: "#FFF", borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-  sheetContent: { paddingHorizontal: wp(6), paddingTop: hp(2.5), paddingBottom: hp(6) },
-  sheetHandle: { width: wp(12), height: 5, backgroundColor: "#DDD", alignSelf: "center", borderRadius: 3, marginBottom: hp(2.2) },
-  modalTitle: { fontSize: wp(5.4), fontWeight: "700", color: "#000", textAlign: "center", marginBottom: hp(3.2) },
-  modalPrimaryButton: {
-    backgroundColor: "#1A73E8",
-    paddingVertical: hp(2),
-    borderRadius: 50,
-    height: hp(6.8),
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: hp(1.8),
-  },
-  modalPrimaryText: { color: "#FFF", fontSize: wp(4.3), fontWeight: "600" },
-  modalSecondaryButton: {
-    backgroundColor: "#F2F2F2",
-    paddingVertical: hp(2),
-    borderRadius: 50,
-    height: hp(6.8),
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: hp(1.8),
-  },
-  modalSecondaryText: { color: "#555", fontSize: wp(4.3), fontWeight: "600" },
-  sheetHint: { fontSize: wp(3.8), color: "#888", textAlign: "center", marginTop: hp(1.5) },
+  avatar: { width: wp(10), height: wp(10), borderRadius: wp(5), borderWidth: 2.5, borderColor: "#FFFFFF" },
+  scrollContent: { paddingHorizontal: wp(5), paddingTop: hp(10), paddingBottom: hp(10) },
+  title: { fontFamily: "Poppins_600SemiBold", fontSize: wp(6.5), color: "#1A73E8", textAlign: "center", marginBottom: hp(3) },
+  ringWrapper: { alignItems: "center", marginVertical: hp(2) },
+  ringCenter: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
+  ringScore: { fontFamily: "Poppins_600SemiBold", fontSize: wp(10), fontWeight: "700" },
+  ringLabel: { fontFamily: "Poppins_400Regular", fontSize: wp(3.5), color: "#666", marginTop: hp(0.5) },
+  severityText: { fontFamily: "Poppins_500Medium", fontSize: wp(5), marginTop: hp(1) },
+  lightCard: { backgroundColor: "#F9F9F9", padding: wp(5), borderRadius: 16, marginVertical: hp(2), elevation: 1 },
+  cardTitle: { fontFamily: "Poppins_600SemiBold", fontSize: wp(4.5), color: "#1A73E8", marginBottom: hp(2) },
+  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: hp(1.5), borderBottomWidth: 1, borderColor: "#CCC" },
+  regionName: { flex: 2, fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#000" },
+  scoreGroup: { flex: 1, alignItems: "center" },
+  scoreLabel: { fontFamily: "Poppins_400Regular", fontSize: wp(3), color: "#666" },
+  scoreValue: { fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#1A73E8", marginTop: hp(0.3) },
+  scoreValueBold: { fontFamily: "Poppins_600SemiBold", fontSize: wp(4), color: "#1A73E8", marginTop: hp(0.3) },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: hp(2), marginTop: hp(1), borderTopWidth: 2, borderColor: "#1A73E8" },
+  totalLabel: { fontFamily: "Poppins_600SemiBold", fontSize: wp(4.5), color: "#1A73E8" },
+  totalValue: { fontFamily: "Poppins_600SemiBold", fontSize: wp(5), color: "#1A73E8" },
+  recommendText: { fontFamily: "Poppins_400Regular", fontSize: wp(4), color: "#000", lineHeight: wp(5.5) },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: hp(1), borderBottomWidth: 0.5, borderColor: "#DDD" },
+  summaryLabel: { fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#666" },
+  summaryValue: { fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#1A73E8" },
+
+  // 2 IMAGES PER ROW
+  imageRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: hp(2) },
+  imageItem: { width: wp(42), alignItems: "center" },
+  uploadedImage: { width: wp(42), height: wp(56), borderRadius: 12, backgroundColor: "#EEE" },
+  imageLabel: { marginTop: hp(0.8), fontSize: wp(3.5), color: "#555", fontWeight: "500" },
+
+  actionRow: { flexDirection: "row", justifyContent: "space-around", marginVertical: hp(2) },
+  actionBtn: { alignItems: "center", paddingVertical: hp(1) },
+  actionText: { fontFamily: "Poppins_500Medium", fontSize: wp(3.5), color: "#1A73E8", marginTop: hp(0.5) },
 });
