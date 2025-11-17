@@ -22,11 +22,10 @@ import {
 import { PieChart } from "react-native-chart-kit";
 import { Circle, G, Svg } from "react-native-svg";
 import { hp, wp } from "../../helpers/common"; // CORRECT PATH
-import { Sidebar } from "./history";
-import { ColorSchemeModal } from "./theme";
+import { Sidebar } from "../history&theme/history";
+import { ColorSchemeModal } from "../history&theme/theme";
 
-const PLACEHOLDER_AVATAR = "https://randomuser.me/api/portraits/women/44.jpg";
-
+const PLACEHOLDER_AVATAR = "https://www.hindustantimes.com/ht-img/img/2023/07/15/1600x900/jennie_1689410686831_1689410687014.jpg";
 // REALISTIC PSORIASIS PLACEHOLDERS
 const PSORIASIS_IMAGES = [
   "https://images.unsplash.com/photo-1623428187422-7c8d7d8d7d8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
@@ -195,24 +194,19 @@ export default function Result() {
           <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Psoriasis History:</Text><Text style={styles.summaryValue}>{ASSESSMENT_FORM.psoriasisHistory === "first" ? "First time onset" : "Recurring"}</Text></View>
         </View>
 
-        {/* 2 IMAGES PER ROW */}
+        {/* 1 IMAGE ONLY */}
         <View style={styles.lightCard}>
-          <Text style={styles.cardTitle}>Affected Areas</Text>
-          {imageRows.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.imageRow}>
-              {row.map((uri, colIndex) => {
-                const globalIndex = rowIndex * 2 + colIndex;
-                const label = globalIndex === 0 ? "Elbow" : globalIndex === 1 ? "Knee" : globalIndex === 2 ? "Scalp" : "Back";
-                return (
-                  <View key={colIndex} style={styles.imageItem}>
-                    <Image source={{ uri }} style={styles.uploadedImage} resizeMode="cover" />
-                    <Text style={styles.imageLabel}>{label}</Text>
-                  </View>
-                );
-              })}
-              {row.length === 1 && <View style={styles.imageItem} />}
+          <Text style={styles.cardTitle}>Affected Area</Text>
+            <View style={styles.singleImageContainer}>
+                    <Image 
+                      source={{ uri: PSORIASIS_IMAGES[0] }} 
+                      style={styles.singleUploadedImage} 
+                      resizeMode="contain"
+                  />
+              <Text style={styles.imageLabel}>Image 1</Text>
+             
             </View>
-          ))}
+        
         </View>
 
         <View style={styles.actionRow}>
@@ -268,11 +262,30 @@ const styles = StyleSheet.create({
   summaryLabel: { fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#666" },
   summaryValue: { fontFamily: "Poppins_500Medium", fontSize: wp(4), color: "#1A73E8" },
 
-  // 2 IMAGES PER ROW
-  imageRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: hp(2) },
-  imageItem: { width: wp(42), alignItems: "center" },
-  uploadedImage: { width: wp(42), height: wp(56), borderRadius: 12, backgroundColor: "#EEE" },
-  imageLabel: { marginTop: hp(0.8), fontSize: wp(3.5), color: "#555", fontWeight: "500" },
+  // 1 image only
+singleImageContainer: {
+  alignItems: "center",
+  marginTop: hp(1),
+},
+singleUploadedImage: {
+  width: wp(80),           
+  height: hp(45),          
+  borderRadius: 16,
+  backgroundColor: "#F0F0F0",
+  marginBottom: hp(1),
+  borderWidth: 1,
+  borderColor: "#DDD",
+  elevation: 3,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+},
+singleImageLabel: {
+  fontFamily: "Poppins_500Medium",
+  fontSize: wp(4),
+  color: "#555",
+},
 
   actionRow: { flexDirection: "row", justifyContent: "space-around", marginVertical: hp(2) },
   actionBtn: { alignItems: "center", paddingVertical: hp(1) },
