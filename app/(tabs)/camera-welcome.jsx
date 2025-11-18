@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Button, Image, StyleSheet, Text, View } from 'react-native';
 
 // Replace with your real backend endpoint
-const BACKEND_UPLOAD_URL = 'https://your.backend.example.com/upload';
+const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
 
 export default function CameraWelcome() {
   const router = useRouter();
