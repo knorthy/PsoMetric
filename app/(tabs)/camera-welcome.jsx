@@ -29,25 +29,26 @@ export default function CameraWelcome() {
       setImage(result.uri);
 
       setUploading(true);
-      const form = new FormData();
-      form.append('photo', {
-        uri: result.uri,
-        name: 'upload.jpg',
-        type: 'image/jpeg',
-      });
+      try {
+        // Convert to blob and upload to be more reliable across platforms
+        const resp = await fetch(result.uri);
+        if (!resp.ok) throw new Error(`Failed to fetch file uri: ${resp.status}`);
+        const blob = await resp.blob();
 
-      const res = await fetch(BACKEND_UPLOAD_URL, {
-        method: 'POST',
-        body: form,
-      });
+        const form = new FormData();
+        form.append('photo', blob, 'upload.jpg');
 
-      if (!res.ok) {
+        const res = await fetch(BACKEND_UPLOAD_URL, {
+          method: 'POST',
+          body: form,
+        });
+
         const text = await res.text();
-        throw new Error(`Upload failed: ${res.status} ${text}`);
+        if (!res.ok) throw new Error(`Upload failed: ${res.status} ${text}`);
+        Alert.alert('Upload successful', text || 'Server accepted the upload');
+      } finally {
+        setUploading(false);
       }
-
-      const json = await res.json().catch(() => null);
-      Alert.alert('Upload successful', json ? JSON.stringify(json) : 'Server accepted the upload');
     } catch (e) {
       Alert.alert('Upload error', String(e));
     } finally {

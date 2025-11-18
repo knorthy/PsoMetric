@@ -1,6 +1,6 @@
 import { Camera, CameraView } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Button, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Button, StyleSheet, Text, View } from 'react-native';
 
 
 const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
