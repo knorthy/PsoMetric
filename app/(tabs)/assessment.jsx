@@ -14,10 +14,10 @@ import {
   View,
 } from "react-native";
 import { hp, wp } from "../../helpers/common";
-import { Sidebar } from "./history";
-import { ColorSchemeModal } from "./theme";
+import { Sidebar } from "../history&theme/history";
+import { ColorSchemeModal } from "../history&theme/theme";
 
-const PLACEHOLDER_AVATAR = "https://randomuser.me/api/portraits/women/44.jpg";
+const PLACEHOLDER_AVATAR = "https://www.hindustantimes.com/ht-img/img/2023/07/15/1600x900/jennie_1689410686831_1689410687014.jpg";
 
 const RadioOption = ({ label, selected, onPress }) => (
   <TouchableOpacity
