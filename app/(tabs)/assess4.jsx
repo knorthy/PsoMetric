@@ -7,17 +7,12 @@ const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
 
 export default function CameraTab() {
   const [hasPermission, setHasPermission] = useState(null);
-  // Avoid reading `Camera.Constants` during module evaluation in case the
-  // native module isn't initialized yet. Use string literals which
-  // `expo-camera` accepts ('back' | 'front') as a safe fallback.
   const [cameraType, setCameraType] = useState('back');
   const cameraRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [serverResponse, setServerResponse] = useState(null);
 
   async function uriToBlob(uri) {
-    // Fetch the file from the given URI and return a Blob. This helps with iOS `ph://` URIs
-    // and makes uploading more reliable across platforms.
     const response = await fetch(uri);
     if (!response.ok) throw new Error(`Failed to fetch file uri: ${response.status}`);
     const blob = await response.blob();
@@ -27,7 +22,6 @@ export default function CameraTab() {
   async function uploadUri(uri) {
     const blob = await uriToBlob(uri);
     const form = new FormData();
-    // Append blob with a filename so backend recognizes it as a file
     form.append('photo', blob, 'photo.jpg');
 
     const res = await fetch(BACKEND_UPLOAD_URL, {
