@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: wp(4),
-    marginTop: hp(2),
+    marginTop: hp(50),
   },
   button: {
     backgroundColor: '#007AFF',
-    paddingVertical: hp(1.8),
+    paddingVertical: hp(1.5),
     paddingHorizontal: wp(5),
-    borderRadius: 10,
+    borderRadius: 15,
     minWidth: wp(30),
     alignItems: 'center',
   },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: hp(2),
+    fontSize: hp(1.5),
     fontWeight: '600',
   },
 });
