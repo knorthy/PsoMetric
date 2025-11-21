@@ -10,4 +10,4 @@ const wp = (percentage) => {
   return (percentage * deviceWidth) / 100;
 };
 
-export { hp, wp };
+export { hp, wp }; //responsive dimension

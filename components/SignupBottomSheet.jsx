@@ -7,14 +7,14 @@ export default function SignupBottomSheet({ onPick, onClose }) {
 
       <TouchableOpacity
         style={[styles.optionButton, styles.primary]}
-        onPress={() => onPick?.('student')}
+        onPress={() => onPick?.('create')}
       >
         <Text style={styles.optionText}>Create Account</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.optionButton, styles.secondary]}
-        onPress={() => onPick?.('organization')}
+        onPress={() => onPick?.('login')}
       >
         <Text style={styles.optionText}>Login</Text>
       </TouchableOpacity>

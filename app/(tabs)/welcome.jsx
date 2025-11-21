@@ -103,8 +103,8 @@ export default function Welcome() {
                     sheetRef.current?.dismiss();
                     
                     setTimeout(() => {
-                      if (role === 'student') router.push('/studcreate');
-                      else if (role === 'organization') router.push('/orgcreate');
+                      if (role === 'create') router.push('/create');
+                      else if (role === 'login') router.push('/signin');
                     }, 220);
                   }}
                   onClose={() => sheetRef.current?.dismiss()}

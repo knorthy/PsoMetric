@@ -11,7 +11,7 @@ const path = require("path");
 const readline = require("readline");
 
 const root = process.cwd();
-const oldDirs = ["app", "components", "hooks", "constants", "scripts"];
+const oldDirs = ["app", "components", "hooks", "constants", "scripts"]; // Directories to be moved or deleted
 const exampleDir = "app-example";
 const newAppDir = "app";
 const exampleDirPath = path.join(root, exampleDir);
