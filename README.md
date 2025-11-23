@@ -14,6 +14,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install @react-native-community/slider
 
    npm i @gorhom/bottom-sheet
+
+   expo install expo-image-picker
    ```
 
 2. Start the app
