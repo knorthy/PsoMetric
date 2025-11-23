@@ -24,6 +24,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+3. If expo sdk update is needed 
+
+   ```bash
+   # 1. Force-install the exact @types versions that SDK 54 requires (change to what SDK upd is req)
+   npm install --save-exact @types/react@19.2.0 @types/react-dom@19.2.0 --force
+   
+   # 2. Clean everything
+   rm -rf node_modules package-lock.json
+   
+   # 3. Fresh install of all dependencies
+   npm install
+   
+   # 4. Let Expo fix every remaining package to SDK 54 versions
+   npx expo install --fix
+   ```
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
