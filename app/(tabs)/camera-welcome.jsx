@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,105 +8,62 @@ import {
   Image,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hp, wp } from '../../helpers/common';
 
-// ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-// ⚠️ Endpoint must be '/analyze/' based on your backend router
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/analyze/'; 
+const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
 
 export default function CameraWelcome() {
   const router = useRouter();
-  
-  // Get the questionnaire answers passed from previous screens
-  const questionnaireParams = useLocalSearchParams(); 
-
-  const [image, setImage] = useState(null);
+  const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
 
-  const pickImageAndUpload = async (useCamera = false) => {
+  const pickImageAndUpload = async () => {
     try {
-      // 1. Permission & Launch
-      let result;
-      if (useCamera) {
-        await ImagePicker.requestCameraPermissionsAsync();
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7, // Lower quality slightly for faster upload
-        });
-      } else {
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7,
-        });
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow access to your photos to continue.');
+        return;
       }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
       if (result.canceled) return;
 
       const asset = result.assets[0];
       const uri = asset.uri;
-      
-      // Fix filename for Android
-      const fileName = uri.split('/').pop();
-      const match = /\.(\w+)$/.exec(fileName);
-      const type = match ? `image/${match[1]}` : `image`;
+      const fileName = asset.fileName || uri.split('/').pop() || 'photo.jpg';
+      const fileType = asset.mimeType || 'image/jpeg';
 
-      setImage(uri);
       setUploading(true);
 
-      // 2. Create FormData
       const formData = new FormData();
-      
-      // ⚠️ CRITICAL FIX: The name must be 'file' to match FastAPI: file: UploadFile
-      formData.append('file', {
-        uri: uri,
-        name: fileName,
-        type: type,
-      });
+      formData.append('photo', { uri, name: fileName, type: fileType });
 
-      console.log("🚀 Uploading to:", BACKEND_UPLOAD_URL);
-
-      // 3. Send to Backend
       const response = await fetch(BACKEND_UPLOAD_URL, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       const responseText = await response.text();
-      console.log("Server Response:", responseText);
+      if (!response.ok) throw new Error(`Server error ${response.status}: ${responseText}`);
 
-      if (!response.ok) {
-        throw new Error(`Server Error ${response.status}: ${responseText}`);
-      }
-
-      const data = JSON.parse(responseText);
-
-      // 4. Navigate to Result Screen with Data
-      router.push({
-        pathname: '/(tabs)/result', // Make sure this matches your folder path!
-        params: {
-          ...questionnaireParams, // Pass previous answers
-          analysisResult: JSON.stringify(data), // Pass AI result
-          images: [uri] // Pass the local image for display
-        }
-      });
-
+      Alert.alert('Success!', 'Photo uploaded successfully!');
     } catch (error) {
-      console.error('Upload failed:', error);
-      Alert.alert('Analysis Failed', 'Could not connect to the server. Check your IP and Wi-Fi.');
+      Alert.alert('Upload Failed', error.message || 'Please try again.');
     } finally {
       setUploading(false);
     }
@@ -116,57 +73,87 @@ export default function CameraWelcome() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
+      {/* Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
+        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="menu" size={28} color="#333" />
         </TouchableOpacity>
-        <View style={styles.avatarContainer}>
-          <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
-        </View>
+
+        <TouchableOpacity style={styles.avatarContainer}>
+          <Image
+            source={require('../../assets/images/avatar.jpg')}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>AI Lesion Analysis</Text>
-        <Text style={styles.subtitle}>
-          Upload a clear photo of the affected area. The AI will analyze redness, thickness, and scaling.
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.headerTitle}>
+          <Text style={styles.headerBlue}>Let's get you</Text>{'\n'}
+          <Text style={styles.headerBlue}>started!</Text>
         </Text>
 
-        {image ? (
-            <Image source={{ uri: image }} style={styles.preview} />
-        ) : (
-            <View style={styles.placeholderPreview}>
-                <Ionicons name="scan-outline" size={80} color="#ccc" />
+        {/* Photo Guide Card */}
+        <View style={styles.guideCard}>
+          <Text style={styles.guideTitle}>Photo Guide</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>How to Take Images</Text>
+            <View style={styles.imageGrid}>
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
             </View>
-        )}
+            <Text style={styles.note}>
+              <Text style={styles.noteBold}>NOTE:</Text> Take photos in bright natural light...
+            </Text>
+          </View>
+        </View>
 
-        <View style={styles.buttonRow}>
-          {/* Gallery Button */}
-          <TouchableOpacity
-            style={[styles.button, uploading && styles.buttonDisabled]}
-            onPress={() => pickImageAndUpload(false)}
-            disabled={uploading}
-          >
-            <Ionicons name="images-outline" size={24} color="#fff" style={{marginRight: 8}} />
-            <Text style={styles.buttonText}>Gallery</Text>
-          </TouchableOpacity>
-
-          {/* Camera Button */}
-          <TouchableOpacity
-            style={[styles.button, uploading && styles.buttonDisabled]}
-            onPress={() => pickImageAndUpload(true)}
-            disabled={uploading}
-          >
-            <Ionicons name="camera-outline" size={24} color="#fff" style={{marginRight: 8}} />
-            <Text style={styles.buttonText}>Camera</Text>
-          </TouchableOpacity>
+        {/* Image Requirements Card */}
+        <View style={styles.guideCard}>
+          <Text style={styles.guideTitle}>Image Requirements</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>What kind of images to upload</Text>
+            <View style={styles.imageGrid}>
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
+              <View style={styles.imagePlaceholder} />
+            </View>
+            <Text style={styles.note}>
+              <Text style={styles.noteBold}>NOTE:</Text> Upload clear, well-lit images...
+            </Text>
+          </View>
         </View>
 
         {uploading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Analyzing Image...</Text>
-          </View>
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: hp(4) }} />
         )}
+      </ScrollView>
+
+      {/* FIXED BOTTOM BAR */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + hp(2) }]}>
+        <TouchableOpacity
+          style={[styles.bottomButton, styles.uploadButton, uploading && styles.buttonDisabled]}
+          onPress={pickImageAndUpload}
+          disabled={uploading}
+        >
+          <Ionicons name="images-outline" size={24} color="white" />
+          <Text style={styles.bottomButtonText}>Upload Image</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.bottomButton, styles.takePhotoButton, uploading && styles.buttonDisabled]}
+          onPress={() => router.push('/assess4')}
+          disabled={uploading}
+        >
+          <Text style={styles.bottomButtonText}>Take Photo</Text>
+          <View style={styles.iconCircle}>
+            <Ionicons name="arrow-forward" size={24} color="#007AFF" />
+          </View>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -181,6 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(6),
     paddingTop: Platform.select({ ios: hp(1.5), android: hp(4) }),
     paddingBottom: hp(2.5),
+    marginTop: Platform.select({ ios: 0, android: hp(1) }),
   },
   avatarContainer: {
     width: wp(9),
@@ -191,83 +179,93 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   avatar: { width: '100%', height: '100%' },
-  content: {
-    flex: 1,
+  scrollView: { flex: 1 },
+  scrollContent: {
     paddingHorizontal: wp(6),
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingBottom: hp(12),
   },
-  title: {
-    fontSize: hp(3.2),
+  headerTitle: {
+    fontSize: hp(3.5),
     fontWeight: '700',
-    color: '#333',
-    marginBottom: hp(1),
-    textAlign: 'center',
+    marginBottom: hp(3),
+    marginTop: hp(2),
   },
-  subtitle: {
-    fontSize: hp(2),
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: hp(4),
-    lineHeight: hp(2.8),
-  },
-  preview: {
-    width: wp(70),
-    height: wp(70),
+  headerBlue: { color: '#007AFF' },
+  guideCard: {
+    backgroundColor: '#F5F5F5',
     borderRadius: 20,
-    marginBottom: hp(4),
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
-    borderColor: '#eee'
+    padding: wp(5),
+    marginBottom: hp(3),
   },
-  placeholderPreview: {
-    width: wp(70),
-    height: wp(70),
-    borderRadius: 20,
-    marginBottom: hp(4),
-    backgroundColor: '#f9f9f9',
-    borderWidth: 2,
-    borderColor: '#eee',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center'
+  guideTitle: { fontSize: hp(2.2), fontWeight: '700', color: '#333', marginBottom: hp(2) },
+  section: { marginBottom: hp(2) },
+  sectionTitle: { fontSize: hp(2), fontWeight: '600', color: '#333', marginBottom: hp(1.5) },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(3),
+    marginBottom: hp(2),
   },
-  buttonRow: {
+  imagePlaceholder: {
+    width: (wp(78) - wp(5)) / 2,
+    height: wp(28),
+    backgroundColor: '#E0E0E0',
+    borderRadius: 12,
+  },
+  note: { fontSize: hp(1.6), color: '#666', lineHeight: hp(2.2) },
+  noteBold: { fontWeight: '700', color: '#333' },
+
+  // Bottom bar button
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: wp(6),
+    right: wp(6),
     flexDirection: 'row',
     gap: wp(4),
+    zIndex: 1000,
   },
-  button: {
+
+  bottomButton: {
+    flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
-    paddingVertical: hp(1.8),
-    paddingHorizontal: wp(5),
-    borderRadius: 15,
-    minWidth: wp(38),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    paddingVertical: hp(2),
+    borderRadius: 50,
+    gap: wp(3),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.34,
+    shadowRadius: 12,
+    elevation: 14,
   },
+
+  uploadButton: {
+    backgroundColor: '#007AFF',
+  },
+
+  takePhotoButton: {
+    backgroundColor: '#005EB8',
+  },
+
   buttonDisabled: {
-    backgroundColor: '#aaa',
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: '#999',
+    opacity: 0.7,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: hp(2),
-    fontWeight: '600',
+
+  bottomButtonText: {
+    color: 'white',
+    fontSize: hp(1.5),
+    fontWeight: '700',
   },
-  loadingContainer: {
-    marginTop: hp(3),
+
+  iconCircle: {
+    width: 30,
+    height: 30,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#007AFF',
-    fontWeight: '500'
-  }
 });
