@@ -101,9 +101,7 @@ const MyComponent = () => {
         router.push('/signin');
       } else {
         alert('Sign up successful! Please check your email for confirmation code.');
-        // You might want to navigate to a confirmation screen here
-        // router.push({ pathname: '/confirm-signup', params: { email } });
-        router.push('/signin');
+        router.push({ pathname: '/verify', params: { email } });
       }
     } catch (error) {
       alert(error.message);
