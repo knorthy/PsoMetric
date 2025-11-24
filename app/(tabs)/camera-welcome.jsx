@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     fontSize: hp(3.5),
     fontWeight: '700',
     marginBottom: hp(3),
-    marginTop: hp(2),
+    marginTop: hp(.1),
   },
   headerBlue: { color: '#007AFF' },
   guideCard: {
