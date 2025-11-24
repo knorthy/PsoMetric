@@ -1,3 +1,4 @@
+import { signIn, signInWithRedirect } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -49,7 +50,7 @@ const MyComponent = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Check for empty fields
     if (!email || !password) {
       alert('All fields are required.');
@@ -68,8 +69,18 @@ const MyComponent = () => {
       return;
     }
 
-    // If all validations pass, proceed
-    router.push('/home');
+    // If all validations pass, proceed with sign in
+    try {
+      const { isSignedIn, nextStep } = await signIn({ username: email, password });
+      if (isSignedIn) {
+        router.push('/home');
+      } else {
+        // Handle other steps like CONFIRM_SIGN_UP, etc.
+        console.log('Next step:', nextStep);
+      }
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   return (
@@ -113,7 +124,7 @@ const MyComponent = () => {
         <View style={styles.iconview}>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Google login')}
+            onPress={() => signInWithRedirect({ provider: 'Google' })}
           >
             <Image
               source={require('../../assets/images/googlelogo.png')}
@@ -122,7 +133,7 @@ const MyComponent = () => {
           </Pressable>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Facebook login')}
+            onPress={() => signInWithRedirect({ provider: 'Facebook' })}
           >
             <Image
               source={require('../../assets/images/fblogo.png')}
@@ -131,7 +142,7 @@ const MyComponent = () => {
           </Pressable>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Twitter login')}
+            onPress={() => signInWithRedirect({ provider: 'Twitter' })}
           >
             <Image
               source={require('../../assets/images/twitterlogo.png')}

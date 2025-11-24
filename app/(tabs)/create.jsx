@@ -1,3 +1,4 @@
+import { signInWithRedirect, signUp } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -56,7 +57,7 @@ const MyComponent = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
 
     if (!name || !email || !password || !confirmPassword) {
       alert('All fields are required.');
@@ -83,7 +84,30 @@ const MyComponent = () => {
       return;
     }
 
-    router.push('/home');
+    try {
+      const { isSignUpComplete, userId, nextStep } = await signUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            name,
+          },
+        },
+      });
+      
+      if (isSignUpComplete) {
+        alert('Sign up successful!');
+        router.push('/signin');
+      } else {
+        alert('Sign up successful! Please check your email for confirmation code.');
+        // You might want to navigate to a confirmation screen here
+        // router.push({ pathname: '/confirm-signup', params: { email } });
+        router.push('/signin');
+      }
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   return (
@@ -166,7 +190,7 @@ const MyComponent = () => {
         <View style={styles.iconview}>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Google login')}
+            onPress={() => signInWithRedirect({ provider: 'Google' })}
           >
             <Image
               source={require('../../assets/images/googlelogo.png')}
@@ -175,7 +199,7 @@ const MyComponent = () => {
           </Pressable>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Facebook login')}
+            onPress={() => signInWithRedirect({ provider: 'Facebook' })}
           >
             <Image
               source={require('../../assets/images/fblogo.png')}
@@ -184,7 +208,7 @@ const MyComponent = () => {
           </Pressable>
           <Pressable
             style={styles.socialButton}
-            onPress={() => console.log('Twitter login')}
+            onPress={() => signInWithRedirect({ provider: 'Twitter' })}
           >
             <Image
               source={require('../../assets/images/twitterlogo.png')}

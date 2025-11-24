@@ -2,7 +2,14 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import 'react-native-get-random-values';
 import 'react-native-reanimated';
+
+import '@aws-amplify/react-native';
+import { Amplify } from 'aws-amplify';
+import amplifyconfig from '../amplifyconfiguration.json';
+
+Amplify.configure(amplifyconfig);
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
