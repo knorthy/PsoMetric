@@ -1,6 +1,7 @@
+// camera-welcome.jsx   ← keep the .jsx extension!
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,52 +19,104 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hp, wp } from '../../helpers/common';
 
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
+// UPDATE THIS IP TO YOUR LAPTOP'S CURRENT IPv4
+const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/analyze/';
 
 export default function CameraWelcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const questionnaireParams = useLocalSearchParams();
+
+  const [image, setImage] = useState(null);        // ← no TypeScript
   const [uploading, setUploading] = useState(false);
 
-  const pickImageAndUpload = async () => {
+  const pickImageAndUpload = async (useCamera = false) => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permission.status !== 'granted') {
-        Alert.alert('Permission Needed', 'Allow access to your photos to continue.');
-        return;
-      }
+      let result;
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera access is needed.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Needed', 'Allow access to your photos.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      }
 
       if (result.canceled) return;
 
       const asset = result.assets[0];
       const uri = asset.uri;
-      const fileName = asset.fileName || uri.split('/').pop() || 'photo.jpg';
-      const fileType = asset.mimeType || 'image/jpeg';
 
+      // Android-safe filename & mime type
+      let fileName = uri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(fileName);
+      const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+
+      setImage(uri);
       setUploading(true);
 
       const formData = new FormData();
-      formData.append('photo', { uri, name: fileName, type: fileType });
+      // "file" is the exact name expected by FastAPI UploadFile
+      formData.append('file', {
+        uri,
+        name: fileName,
+        type,
+      });
+
+      console.log('Uploading to:', BACKEND_UPLOAD_URL);
 
       const response = await fetch(BACKEND_UPLOAD_URL, {
         method: 'POST',
         body: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       const responseText = await response.text();
-      if (!response.ok) throw new Error(`Server error ${response.status}: ${responseText}`);
+      console.log('Server Response:', responseText);
 
-      Alert.alert('Success!', 'Photo uploaded successfully!');
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}: ${responseText}`);
+      }
+
+      const data = JSON.parse(responseText);
+
+      // Navigate to result screen with everything
+      router.push({
+        pathname: '/(tabs)/result',
+        params: {
+          ...questionnaireParams,
+          analysisResult: JSON.stringify(data),
+          images: JSON.stringify([uri]), // for preview on result screen
+        },
+      });
     } catch (error) {
-      Alert.alert('Upload Failed', error.message || 'Please try again.');
+      console.error('Upload failed:', error);
+      Alert.alert(
+        'Analysis Failed',
+        error.message?.includes('Network')
+          ? 'Cannot reach server. Check Wi-Fi and IP address.'
+          : error.message || 'Something went wrong.'
+      );
     } finally {
       setUploading(false);
     }
@@ -93,6 +146,13 @@ export default function CameraWelcome() {
           <Text style={styles.headerBlue}>Let's get you</Text>{'\n'}
           <Text style={styles.headerBlue}>started!</Text>
         </Text>
+
+        {/* Selected image preview */}
+        {image && (
+          <View style={styles.previewContainer}>
+            <Image source={{ uri: image }} style={styles.previewImage} />
+          </View>
+        )}
 
         {/* Photo Guide Card */}
         <View style={styles.guideCard}>
@@ -129,15 +189,18 @@ export default function CameraWelcome() {
         </View>
 
         {uploading && (
-          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: hp(4) }} />
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Analyzing your skin...</Text>
+          </View>
         )}
       </ScrollView>
 
-      {/* FIXED BOTTOM BAR */}
+      {/* Fixed Bottom Bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + hp(2) }]}>
         <TouchableOpacity
           style={[styles.bottomButton, styles.uploadButton, uploading && styles.buttonDisabled]}
-          onPress={pickImageAndUpload}
+          onPress={() => pickImageAndUpload(false)}
           disabled={uploading}
         >
           <Ionicons name="images-outline" size={24} color="white" />
@@ -146,12 +209,12 @@ export default function CameraWelcome() {
 
         <TouchableOpacity
           style={[styles.bottomButton, styles.takePhotoButton, uploading && styles.buttonDisabled]}
-          onPress={() => router.push('/assess4')}
+          onPress={() => pickImageAndUpload(true)}
           disabled={uploading}
         >
           <Text style={styles.bottomButtonText}>Take Photo</Text>
           <View style={styles.iconCircle}>
-            <Ionicons name="arrow-forward" size={24} color="#007AFF" />
+            <Ionicons name="camera-outline" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
       </View>
@@ -159,6 +222,7 @@ export default function CameraWelcome() {
   );
 }
 
+/* Styles stay exactly the same as before – just pure JS */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   topBar: {
@@ -180,52 +244,26 @@ const styles = StyleSheet.create({
   },
   avatar: { width: '100%', height: '100%' },
   scrollView: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: wp(6),
-    paddingBottom: hp(12),
-  },
-  headerTitle: {
-    fontSize: hp(3.5),
-    fontWeight: '700',
-    marginBottom: hp(3),
-    marginTop: hp(.1),
-  },
+  scrollContent: { paddingHorizontal: wp(6), paddingBottom: hp(15) },
+  headerTitle: { fontSize: hp(3.5), fontWeight: '700', marginBottom: hp(3), marginTop: hp(0.1) },
   headerBlue: { color: '#007AFF' },
-  guideCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    padding: wp(5),
-    marginBottom: hp(3),
-  },
+
+  previewContainer: { alignItems: 'center', marginBottom: hp(3) },
+  previewImage: { width: wp(80), height: wp(80), borderRadius: 20, borderWidth: 2, borderColor: '#007AFF' },
+
+  guideCard: { backgroundColor: '#F5F5F5', borderRadius: 20, padding: wp(5), marginBottom: hp(3) },
   guideTitle: { fontSize: hp(2.2), fontWeight: '700', color: '#333', marginBottom: hp(2) },
   section: { marginBottom: hp(2) },
   sectionTitle: { fontSize: hp(2), fontWeight: '600', color: '#333', marginBottom: hp(1.5) },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp(3),
-    marginBottom: hp(2),
-  },
-  imagePlaceholder: {
-    width: (wp(78) - wp(5)) / 2,
-    height: wp(28),
-    backgroundColor: '#E0E0E0',
-    borderRadius: 12,
-  },
+  imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(3), marginBottom: hp(2) },
+  imagePlaceholder: { width: (wp(78) - wp(5)) / 2, height: wp(28), backgroundColor: '#E0E0E0', borderRadius: 12 },
   note: { fontSize: hp(1.6), color: '#666', lineHeight: hp(2.2) },
   noteBold: { fontWeight: '700', color: '#333' },
 
-  // Bottom bar button
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: wp(6),
-    right: wp(6),
-    flexDirection: 'row',
-    gap: wp(4),
-    zIndex: 1000,
-  },
+  loadingOverlay: { alignItems: 'center', marginVertical: hp(4) },
+  loadingText: { marginTop: hp(2), fontSize: hp(2), color: '#007AFF', fontWeight: '600' },
 
+  bottomBar: { position: 'absolute', bottom: 0, left: wp(6), right: wp(6), flexDirection: 'row', gap: wp(4), zIndex: 1000 },
   bottomButton: {
     flex: 1,
     flexDirection: 'row',
@@ -240,32 +278,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 14,
   },
-
-  uploadButton: {
-    backgroundColor: '#007AFF',
-  },
-
-  takePhotoButton: {
-    backgroundColor: '#005EB8',
-  },
-
-  buttonDisabled: {
-    backgroundColor: '#999',
-    opacity: 0.7,
-  },
-
-  bottomButtonText: {
-    color: 'white',
-    fontSize: hp(1.5),
-    fontWeight: '700',
-  },
-
-  iconCircle: {
-    width: 30,
-    height: 30,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  uploadButton: { backgroundColor: '#007AFF' },
+  takePhotoButton: { backgroundColor: '#005EB8' },
+  buttonDisabled: { backgroundColor: '#999', opacity: 0.7 },
+  bottomButtonText: { color: 'white', fontSize: hp(1.8), fontWeight: '700' },
+  iconCircle: { width: 36, height: 36, backgroundColor: 'white', borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
 });
