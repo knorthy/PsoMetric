@@ -1,4 +1,4 @@
-// camera-welcome.jsx   ← keep the .jsx extension!
+
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hp, wp } from '../../helpers/common';
 
-// UPDATE THIS IP TO YOUR LAPTOP'S CURRENT IPv4
+// UPDATE THIS IP 
 const BACKEND_UPLOAD_URL = 'http://192.168.0.178:8000/analyze/';
 
 export default function CameraWelcome() {
@@ -27,7 +27,7 @@ export default function CameraWelcome() {
   const insets = useSafeAreaInsets();
   const questionnaireParams = useLocalSearchParams();
 
-  const [image, setImage] = useState(null);        // ← no TypeScript
+  const [image, setImage] = useState(null);       
   const [uploading, setUploading] = useState(false);
 
   const pickImageAndUpload = async (useCamera = false) => {
@@ -106,7 +106,7 @@ export default function CameraWelcome() {
         params: {
           ...questionnaireParams,
           analysisResult: JSON.stringify(data),
-          images: JSON.stringify([uri]), // for preview on result screen
+          images: JSON.stringify([uri]), 
         },
       });
     } catch (error) {
@@ -222,7 +222,7 @@ export default function CameraWelcome() {
   );
 }
 
-/* Styles stay exactly the same as before – just pure JS */
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   topBar: {
