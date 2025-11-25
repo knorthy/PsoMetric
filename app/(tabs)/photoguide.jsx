@@ -16,20 +16,41 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hp, wp } from '../../helpers/common';
 
+// Image sets with captions
+const howToTakeImages = [
+  { source: require('../../assets/images/guide/p1.png'), label: 'Take images in a well-lit area' },
+  { source: require('../../assets/images/guide/p2.png'), label: 'Images should be centered and not cropped' },
+  { source: require('../../assets/images/guide/p3.png'), label: 'Do not put creams or cover ups' },
+  { source: require('../../assets/images/guide/p4.png'), label: 'Clear and focused' },
+];
+
+const whatToUploadImages = [
+  { source: require('../../assets/images/guide/p5.png'), label: 'Accepted image formats' },
+  { source: require('../../assets/images/guide/p6.png'), label: 'Capture images against a plain background' },
+  { source: require('../../assets/images/guide/p7.png'), label: 'Dont upload irrelevant images' },
+  { source: require('../../assets/images/guide/p8.png'), label: 'No filters or edit' },
+];
+
 export default function CameraWelcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const questionnaireParams = useLocalSearchParams();
+  const [uploading] = useState(false);
 
-  const [uploading] = useState(false); 
-
- 
   const goToCamera = () => {
     router.push({
-      pathname: '/camera-welcome', 
-      params: questionnaireParams, // forward any questionnaire params if needed
+      pathname: '/camera-welcome',
+      params: questionnaireParams,
     });
   };
+
+  // Reusable component for image + label
+  const GuideImageItem = ({ source, label }) => (
+    <View style={styles.imageItem}>
+      <Image source={source} style={styles.guideImage} resizeMode="cover" />
+      <Text style={styles.imageLabel}>{label}</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,19 +77,22 @@ export default function CameraWelcome() {
           <Text style={styles.headerBlue}>started!</Text>
         </Text>
 
-        {/* Photo Guide Card */}
+        {/* Photo Guide Card – How to Take Images */}
         <View style={styles.guideCard}>
           <Text style={styles.guideTitle}>Photo Guide</Text>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>How to Take Images</Text>
             <View style={styles.imageGrid}>
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
+              {howToTakeImages.map((item, index) => (
+                <GuideImageItem
+                  key={`how-${index}`}
+                  source={item.source}
+                  label={item.label}
+                />
+              ))}
             </View>
             <Text style={styles.note}>
-              <Text style={styles.noteBold}>NOTE:</Text> Take photos in bright natural light...
+              <Text style={styles.noteBold}>NOTE:</Text> Ensure images are clear, centered, and well-lit; avoid cover-ups or topical applications.
             </Text>
           </View>
         </View>
@@ -79,26 +103,23 @@ export default function CameraWelcome() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>What kind of images to upload</Text>
             <View style={styles.imageGrid}>
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.imagePlaceholder} />
+              {whatToUploadImages.map((item, index) => (
+                <GuideImageItem
+                  key={`req-${index}`}
+                  source={item.source}
+                  label={item.label}
+                />
+              ))}
             </View>
             <Text style={styles.note}>
-              <Text style={styles.noteBold}>NOTE:</Text> Upload clear, well-lit images...
+              <Text style={styles.noteBold}>NOTE:</Text> Upload clear, relevant, and unedited photos against a plain background
             </Text>
           </View>
         </View>
 
-        {uploading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Analyzing your skin...</Text>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Single FAB Button */}
+      {/* FAB Button */}
       <View style={[styles.fabContainer, { paddingBottom: insets.bottom + hp(3) }]}>
         <TouchableOpacity
           style={[styles.fabButton, uploading && styles.buttonDisabled]}
@@ -118,7 +139,6 @@ export default function CameraWelcome() {
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
@@ -149,9 +169,37 @@ const styles = StyleSheet.create({
   guideTitle: { fontSize: hp(2.2), fontWeight: '700', color: '#333', marginBottom: hp(2) },
   section: { marginBottom: hp(2) },
   sectionTitle: { fontSize: hp(2), fontWeight: '600', color: '#333', marginBottom: hp(1.5) },
-  imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(3), marginBottom: hp(2) },
-  imagePlaceholder: { width: (wp(78) - wp(5)) / 2, height: wp(28), backgroundColor: '#E0E0E0', borderRadius: 12 },
-  note: { fontSize: hp(1.6), color: '#666', lineHeight: hp(2.2) },
+  
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(3),
+    justifyContent: 'space-between',
+  },
+
+  // Wrapper for each image
+  imageItem: {
+    width: (wp(78) - wp(5)) / 2,
+    alignItems: 'center',
+  },
+
+  guideImage: {
+    width: '100%',
+    height: wp(28),
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+  },
+
+  // Label style
+  imageLabel: {
+    marginTop: hp(1),
+    fontSize: hp(1.4),
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  note: { fontSize: hp(1.6), color: '#666', lineHeight: hp(2.2), marginTop: hp(1) },
   noteBold: { fontWeight: '700', color: '#333' },
 
   loadingOverlay: { alignItems: 'center', marginVertical: hp(4) },
@@ -180,13 +228,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 20,
   },
-  fabText: {
-    color: 'white',
-    fontSize: hp(1.8),
-    fontWeight: '700',
-  },
-  buttonDisabled: {
-    backgroundColor: '#999',
-    opacity: 0.8,
-  },
+  fabText: { color: 'white', fontSize: hp(1.8), fontWeight: '700' },
+  buttonDisabled: { backgroundColor: '#999', opacity: 0.8 },
 });
