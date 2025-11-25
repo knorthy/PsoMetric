@@ -215,9 +215,9 @@ const MyComponent = () => {
           </Pressable>
         </View>
         <Text style={styles.text}>
-          Sign up as an{' '}
+          Already have an account?{' '}
           <Text style={styles.signup} onPress={() => router.push('/orgcreate')}>
-            Organization
+            Login
           </Text>
         </Text>
       </View>
