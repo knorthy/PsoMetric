@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hp, wp } from '../../helpers/common';
 
 // UPDATE THIS IP TO YOUR LAPTOP'S CURRENT IPv4
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/analyze/';
+const BACKEND_UPLOAD_URL = 'http://192.168.0.178:8000/analyze/';
 
 export default function CameraWelcome() {
   const router = useRouter();
