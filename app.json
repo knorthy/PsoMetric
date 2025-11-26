@@ -4,7 +4,7 @@
     "slug": "psometric",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/pm.png",
     "scheme": "psometric",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

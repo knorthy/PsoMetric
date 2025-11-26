@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,8 +17,7 @@ import {
 import { hp, wp } from '../../helpers/common';
 
 // ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-// ⚠️ Endpoint must be '/analyze/' based on your backend router
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/analyze/'; 
+const BACKEND_UPLOAD_URL = 'http://192.168.31.117:8000/analyze/'; 
 
 export default function CameraWelcome() {
   const router = useRouter();
@@ -126,9 +125,9 @@ export default function CameraWelcome() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>AI Lesion Analysis</Text>
+        <Text style={styles.title}>Lesion Analysis</Text>
         <Text style={styles.subtitle}>
-          Upload a clear photo of the affected area. The AI will analyze redness, thickness, and scaling.
+          Upload a clear photo of the affected area. Psometric will analyze redness, thickness, and scaling.
         </Text>
 
         {image ? (

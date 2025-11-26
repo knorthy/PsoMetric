@@ -2,16 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { hp, wp } from '../../helpers/common';
 
@@ -395,7 +395,7 @@ export default function Assess3Screen() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
-          router.push('/summary'); 
+          router.push('/photoguide'); 
         }}
       >
         <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
