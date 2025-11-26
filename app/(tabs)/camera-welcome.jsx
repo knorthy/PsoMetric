@@ -17,7 +17,7 @@ import {
 import { hp, wp } from '../../helpers/common';
 
 // ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/analyze/'; 
+const BACKEND_UPLOAD_URL = 'http://192.168.31.117:8000/analyze/'; 
 
 export default function CameraWelcome() {
   const router = useRouter();
