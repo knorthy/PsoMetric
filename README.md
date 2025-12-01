@@ -24,6 +24,9 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo install @react-navigation/native @react-navigation/native-stack
 
    npx expo install react-native-screens react-native-safe-area-context
+
+   npx expo install @shopify/react-native-skia
+
    ```
 
 2. Start the app
