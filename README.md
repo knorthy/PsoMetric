@@ -18,6 +18,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    expo install expo-image-picker
 
    npm i @react-native-async-storage/async-storage
+
+   npx expo install @react-navigation/native @react-navigation/native-stack
+   
+   npx expo install react-native-screens react-native-safe-area-context
    ```
 
 2. Start the app

@@ -1,31 +1,39 @@
-import { signIn, signInWithRedirect } from 'aws-amplify/auth';
+// File: app/signin.jsx (or wherever your sign-in screen is)
+
+import { signIn, signInWithRedirect } from '@aws-amplify/auth';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
 
-const MyComponent = () => {
+const SignIn = () => {
   const router = useRouter();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Email validation regex
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Validation helpers
+  const isValidEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Password validation: 8 or more characters, 1 special char, 1 capital, 1 number
-  const isValidPassword = (password) => {
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
-    return passwordRegex.test(password);
-  };
+  const isValidPassword = password =>
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password);
 
-  // Real-time validation for email
-  const validateEmail = (value) => {
+  const validateEmail = value => {
     setEmail(value);
     if (!value) {
       setEmailError('Email is required.');
@@ -36,90 +44,117 @@ const MyComponent = () => {
     }
   };
 
-  // Real-time validation for password
-  const validatePassword = (value) => {
+  const validatePassword = value => {
     setPassword(value);
     if (!value) {
       setPasswordError('Password is required.');
     } else if (value.length < 8) {
-      setPasswordError('Password must be at least 8 characters long.');
+      setPasswordError('Password must be at least 8 characters.');
     } else if (!isValidPassword(value)) {
-      setPasswordError('Password must contain at least one capital letter, one number, and one special character.');
+      setPasswordError('Must contain 1 uppercase, 1 number & 1 special character.');
     } else {
       setPasswordError('');
     }
   };
 
-  const handleSubmit = async () => {
-    // Check for empty fields
+  const handleSignIn = async () => {
+    // Final check before hitting Amplify
     if (!email || !password) {
-      alert('All fields are required.');
+      Alert.alert('Missing fields', 'Please fill in email and password.');
+      return;
+    }
+    if (emailError || passwordError) {
+      Alert.alert('Fix errors', 'Please correct the errors above.');
       return;
     }
 
-    // Check email validity
-    if (!isValidEmail(email)) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-
-    // Check password validity
-    if (!isValidPassword(password)) {
-      alert('Password must be at least 8 characters long with at least one capital letter, one number, and one special character.');
-      return;
-    }
-
-    // If all validations pass, proceed with sign in
+    setLoading(true);
     try {
-      const { isSignedIn, nextStep } = await signIn({ username: email, password });
-      if (isSignedIn) {
-        router.push('/home');
-      } else {
-        // Handle other steps like CONFIRM_SIGN_UP, etc.
-        console.log('Next step:', nextStep);
+      const response = await signIn({ username: email.trim().toLowerCase(), password });
+
+      if (response.isSignedIn) {
+        router.replace('/(tabs)/home');
       }
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      console.error(err);
+      const message =
+        err.message ||
+        err.name === 'UserNotConfirmedException'
+          ? 'Please confirm your email first.'
+          : 'Sign in failed. Check your credentials.';
+      Alert.alert('Sign In Failed', message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScreenWrapper bg="white">
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Title */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Sign in your account</Text>
         </View>
+
         {/* Email */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Email</Text>
           <TextInput
-            style={[styles.input, emailError ? styles.inputError : email && styles.inputValid]}
+            style={[
+              styles.input,
+              emailError ? styles.inputError : email && styles.inputValid,
+            ]}
             placeholder="ex: jan.smith@email.com"
-            onChangeText={validateEmail}
             value={email}
+            onChangeText={validateEmail}
             keyboardType="email-address"
-            accessibilityLabel="Email address"
-            accessibilityHint="Enter your email address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         </View>
+
         {/* Password */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Password</Text>
-          <TextInput
-            style={[styles.input, passwordError ? styles.inputError : password && styles.inputValid]}
-            placeholder="Enter password"
-            secureTextEntry={true}
-            onChangeText={validatePassword}
-            value={password}
-            accessibilityLabel="Password"
-            accessibilityHint="Enter a password with at least 8 characters, including a capital letter, number, and special character"
-          />
+          <View
+            style={[
+              styles.passwordInputWrapper,
+              passwordError ? styles.inputError : password && styles.inputValid,
+            ]}
+          >
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter password"
+              value={password}
+              onChangeText={validatePassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+              <MaterialIcons
+                name={showPassword ? 'visibility' : 'visibility-off'}
+                size={24}
+                color="#666"
+              />
+            </Pressable>
+          </View>
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
         </View>
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.textButton}>SIGN IN</Text>
+
+        {/* SIGN IN BUTTON */}
+        <Pressable
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={loading}
+        >
+          <Text style={styles.textButton}>
+            {loading ? 'SIGNING IN...' : 'SIGN IN'}
+          </Text>
         </Pressable>
+
+        {/* Social Login */}
         <Text style={styles.text}>Or sign in with</Text>
         <View style={styles.iconview}>
           <Pressable
@@ -150,6 +185,8 @@ const MyComponent = () => {
             />
           </Pressable>
         </View>
+
+        {/* Sign Up Link */}
         <Text style={styles.signupText}>
           Don’t have an account?{' '}
           <Text style={styles.signup} onPress={() => router.push('/create')}>
@@ -164,98 +201,110 @@ const MyComponent = () => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingBottom: hp(3),
+    paddingBottom: hp(5),
   },
   titleContainer: {
     width: wp(80),
     alignItems: 'flex-start',
     marginTop: hp(5),
-    marginBottom: hp(2),
+    marginBottom: hp(3),
+  },
+  title: {
+    fontSize: wp(6.5),
+    fontWeight: 'bold',
+    color: '#000',
   },
   inputContainer: {
     width: wp(80),
-    marginBottom: hp(1.5),
-  },
-  input: {
-    height: hp(5),
-    borderColor: '#e0e0e0',
-    backgroundColor: '#e0e0e0',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingLeft: wp(3),
-  },
-  inputError: {
-    borderColor: 'red',
-    borderWidth: 1,
-  },
-  inputValid: {
-    borderColor: 'green',
-    borderWidth: 1,
-  },
-  errorText: {
-    fontSize: wp(3.5),
-    color: 'red',
-    marginTop: hp(0.5),
-  },
-  title: {
-    fontSize: wp(6),
-    fontWeight: 'bold',
-    color: 'black',
+    marginBottom: hp(2),
   },
   labelText: {
     fontSize: wp(4),
-    color: 'black',
+    color: '#000',
     marginBottom: hp(0.5),
+  },
+  input: {
+    height: hp(6),
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: wp(4),
+    fontSize: wp(4),
+  },
+  passwordInputWrapper: {
+    height: hp(6),
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: wp(4),
+  },
+  eyeButton: {
+    padding: wp(2),
+  },
+  inputError: { borderColor: 'red', borderWidth: 1 },
+  inputValid: { borderColor: 'green', borderWidth: 1 },
+  errorText: {
+    color: 'red',
+    fontSize: wp(3.5),
+    marginTop: hp(0.5),
+  },
+  button: {
+    height: hp(6),
+    width: wp(80),
+    backgroundColor: '#0085FF',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: hp(2),
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  textButton: {
+    color: '#fff',
+    fontSize: wp(4.5),
+    fontWeight: '600',
   },
   text: {
     fontSize: wp(4),
-    color: 'black',
-    marginVertical: hp(0.5),
-  },
-  textButton: {
-    fontSize: wp(4),
-    color: 'white',
-    alignSelf: 'center',
-  },
-  button: {
-    height: hp(5),
-    width: wp(80),
-    borderRadius: 10,
-    justifyContent: 'center',
-    backgroundColor: '#0085FF',
-    padding: wp(1.5),
-    marginVertical: hp(0.5),
-  },
-  signupText: {
-    fontSize: wp(4),
-    color: 'black',
-    marginVertical: hp(0.5),
-    marginBottom: hp(2),
-  },
-  signup: {
-    color: '#0085FF',
-    fontSize: wp(4),
-  },
-  socialButton: {
-    height: hp(5),
-    width: hp(5),
-    borderRadius: 5,
-    borderColor: '#e0e0e0',
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: wp(2.5),
-  },
-  socialIcon: {
-    width: wp(6),
-    height: wp(6),
+    color: '#333',
+    marginVertical: hp(2),
   },
   iconview: {
     flexDirection: 'row',
+    gap: wp(6),
+    marginBottom: hp(4),
+  },
+  socialButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: hp(0.5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  socialIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+  },
+  signupText: {
+    fontSize: wp(4),
+    color: '#555',
+  },
+  signup: {
+    color: '#0085FF',
+    fontWeight: 'bold',
   },
 });
 
-export default MyComponent;
+export default SignIn;

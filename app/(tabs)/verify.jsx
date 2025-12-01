@@ -2,71 +2,64 @@ import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
-// ⬇️ Adjust these paths to match your project structure
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
 
 const VerifyScreen = () => {
   const router = useRouter();
   
-  // 1. Get the email passed from the Signup Screen
+  // Get the email passed from the Signup Screen
   const params = useLocalSearchParams();
   const { email } = params;
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ⬇️ HANDLER: Verify the OTP
+  // HANDLER: Verify the OTP and go to Home on success
   const handleVerify = async () => {
-    if (!code) {
-      Alert.alert('Error', 'Please enter the verification code.');
+    if (!code || code.length < 6) {
+      Alert.alert('Error', 'Please enter the 6-digit verification code.');
       return;
     }
 
     setLoading(true);
     try {
-      // AWS Amplify v6 Verification Logic
-      const { isSignUpComplete, nextStep } = await confirmSignUp({
+      const { isSignUpComplete } = await confirmSignUp({
         username: email,
-        confirmationCode: code
+        confirmationCode: code.trim()
       });
 
       if (isSignUpComplete) {
-        Alert.alert('Success', 'Email verified successfully!', [
-          {
-            text: 'Go to Sign In',
-            onPress: () => router.replace('/signin'), // Using replace so they can't go back
-          },
-        ]);
-      } else {
-        // Edge case: Sometimes additional steps are needed
-        console.log('Verification next step:', nextStep);
+        router.replace('/(tabs)/home'); 
       }
     } catch (error) {
       console.log('Verification Error:', error);
-      Alert.alert('Verification Failed', error.message || 'Invalid code');
+      Alert.alert(
+        'Verification Failed',
+        error.message || 'Invalid or expired code. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ⬇️ HANDLER: Resend Code
+  // HANDLER: Resend verification code
   const handleResendCode = async () => {
     try {
       await resendSignUpCode({ username: email });
-      Alert.alert('Sent', `A new code has been sent to ${email}`);
+      Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
     } catch (error) {
       console.log('Resend Error:', error);
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error.message || 'Could not resend code');
     }
   };
 
@@ -93,13 +86,14 @@ const VerifyScreen = () => {
             keyboardType="number-pad"
             onChangeText={setCode}
             value={code}
-            maxLength={6} 
+            maxLength={6}
+            autoFocus
           />
         </View>
 
-        {/* Verify Button */}
+        {/* Confirm Email Button */}
         <Pressable 
-          style={styles.button} 
+          style={[styles.button, loading && styles.buttonDisabled]} 
           onPress={handleVerify}
           disabled={loading}
         >
@@ -112,8 +106,8 @@ const VerifyScreen = () => {
 
         {/* Resend Link */}
         <View style={styles.resendContainer}>
-          <Text style={styles.text}>Didn't receive code? </Text>
-          <Pressable onPress={handleResendCode}>
+          <Text style={styles.text}>Didn't receive the code? </Text>
+          <Pressable onPress={handleResendCode} disabled={loading}>
             <Text style={styles.linkText}>Resend</Text>
           </Pressable>
         </View>
@@ -123,7 +117,6 @@ const VerifyScreen = () => {
   );
 };
 
-// ⬇️ STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -166,21 +159,25 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingLeft: wp(4),
     fontSize: wp(5),
-    letterSpacing: 5, // Makes the OTP code easier to read
+    letterSpacing: 5,
+    textAlign: 'center',
   },
   button: {
     height: hp(6),
     width: wp(80),
     borderRadius: 10,
     justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#0085FF',
     marginVertical: hp(2),
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   textButton: {
     fontSize: wp(4.5),
     fontWeight: '600',
     color: 'white',
-    alignSelf: 'center',
   },
   resendContainer: {
     flexDirection: 'row',
