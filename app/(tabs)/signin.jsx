@@ -1,8 +1,11 @@
-import { MaterialIcons } from '@expo/vector-icons'; // Import icon
-import { signIn, signInWithRedirect } from 'aws-amplify/auth';
+// File: app/signin.jsx (or wherever your sign-in screen is)
+
+import { signIn, signInWithRedirect } from '@aws-amplify/auth';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -14,27 +17,23 @@ import {
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
 
-const MyComponent = () => {
+const SignIn = () => {
   const router = useRouter();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Toggle state
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Email validation
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Validation helpers
+  const isValidEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Password validation
-  const isValidPassword = (password) => {
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
-    return passwordRegex.test(password);
-  };
+  const isValidPassword = password =>
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password);
 
-  const validateEmail = (value) => {
+  const validateEmail = value => {
     setEmail(value);
     if (!value) {
       setEmailError('Email is required.');
@@ -45,57 +44,59 @@ const MyComponent = () => {
     }
   };
 
-  const validatePassword = (value) => {
+  const validatePassword = value => {
     setPassword(value);
     if (!value) {
       setPasswordError('Password is required.');
     } else if (value.length < 8) {
-      setPasswordError('Password must be at least 8 characters long.');
+      setPasswordError('Password must be at least 8 characters.');
     } else if (!isValidPassword(value)) {
-      setPasswordError('Password must contain at least one capital letter, one number, and one special character.');
+      setPasswordError('Must contain 1 uppercase, 1 number & 1 special character.');
     } else {
       setPasswordError('');
     }
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const handleSubmit = async () => {
+  const handleSignIn = async () => {
+    // Final check before hitting Amplify
     if (!email || !password) {
-      alert('All fields are required.');
+      Alert.alert('Missing fields', 'Please fill in email and password.');
+      return;
+    }
+    if (emailError || passwordError) {
+      Alert.alert('Fix errors', 'Please correct the errors above.');
       return;
     }
 
-    if (!isValidEmail(email)) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-
-    if (!isValidPassword(password)) {
-      alert('Password must be at least 8 characters long with at least one capital letter, one number, and one special character.');
-      return;
-    }
-
+    setLoading(true);
     try {
-      const { isSignedIn } = await signIn({ username: email, password });
-      if (isSignedIn) {
-        router.push('/home');
+      const response = await signIn({ username: email.trim().toLowerCase(), password });
+
+      if (response.isSignedIn) {
+        router.replace('/(tabs)/home');
       }
-    } catch (error) {
-      alert(error.message || 'Sign in failed');
+    } catch (err) {
+      console.error(err);
+      const message =
+        err.message ||
+        err.name === 'UserNotConfirmedException'
+          ? 'Please confirm your email first.'
+          : 'Sign in failed. Check your credentials.';
+      Alert.alert('Sign In Failed', message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScreenWrapper bg="white">
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Title */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Sign in your account</Text>
         </View>
 
-        {/* Email Field */}
+        {/* Email */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Email</Text>
           <TextInput
@@ -104,8 +105,8 @@ const MyComponent = () => {
               emailError ? styles.inputError : email && styles.inputValid,
             ]}
             placeholder="ex: jan.smith@email.com"
-            onChangeText={validateEmail}
             value={email}
+            onChangeText={validateEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -113,7 +114,7 @@ const MyComponent = () => {
           {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         </View>
 
-        {/* Password Field with Show/Hide Icon */}
+        {/* Password */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Password</Text>
           <View
@@ -125,13 +126,13 @@ const MyComponent = () => {
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter password"
-              secureTextEntry={!showPassword}
-              onChangeText={validatePassword}
               value={password}
+              onChangeText={validatePassword}
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Pressable onPress={toggleShowPassword} style={styles.eyeButton}>
+            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
               <MaterialIcons
                 name={showPassword ? 'visibility' : 'visibility-off'}
                 size={24}
@@ -142,34 +143,50 @@ const MyComponent = () => {
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
         </View>
 
-        {/* Sign In Button */}
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.textButton}>SIGN IN</Text>
+        {/* SIGN IN BUTTON */}
+        <Pressable
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={loading}
+        >
+          <Text style={styles.textButton}>
+            {loading ? 'SIGNING IN...' : 'SIGN IN'}
+          </Text>
         </Pressable>
 
+        {/* Social Login */}
         <Text style={styles.text}>Or sign in with</Text>
-
         <View style={styles.iconview}>
           <Pressable
             style={styles.socialButton}
             onPress={() => signInWithRedirect({ provider: 'Google' })}
           >
-            <Image source={require('../../assets/images/googlelogo.png')} style={styles.socialIcon} />
+            <Image
+              source={require('../../assets/images/googlelogo.png')}
+              style={styles.socialIcon}
+            />
           </Pressable>
           <Pressable
             style={styles.socialButton}
             onPress={() => signInWithRedirect({ provider: 'Facebook' })}
           >
-            <Image source={require('../../assets/images/fblogo.png')} style={styles.socialIcon} />
+            <Image
+              source={require('../../assets/images/fblogo.png')}
+              style={styles.socialIcon}
+            />
           </Pressable>
           <Pressable
             style={styles.socialButton}
             onPress={() => signInWithRedirect({ provider: 'Twitter' })}
           >
-            <Image source={require('../../assets/images/twitterlogo.png')} style={styles.socialIcon} />
+            <Image
+              source={require('../../assets/images/twitterlogo.png')}
+              style={styles.socialIcon}
+            />
           </Pressable>
         </View>
 
+        {/* Sign Up Link */}
         <Text style={styles.signupText}>
           Don’t have an account?{' '}
           <Text style={styles.signup} onPress={() => router.push('/create')}>
@@ -184,118 +201,105 @@ const MyComponent = () => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingBottom: hp(3),
+    paddingBottom: hp(5),
   },
   titleContainer: {
     width: wp(80),
     alignItems: 'flex-start',
     marginTop: hp(5),
-    marginBottom: hp(2),
+    marginBottom: hp(3),
   },
   title: {
-    fontSize: wp(6),
+    fontSize: wp(6.5),
     fontWeight: 'bold',
-    color: 'black',
+    color: '#000',
   },
   inputContainer: {
     width: wp(80),
-    marginBottom: hp(1.5),
+    marginBottom: hp(2),
   },
   labelText: {
     fontSize: wp(4),
-    color: 'black',
+    color: '#000',
     marginBottom: hp(0.5),
   },
-
-  // Regular Input (Email)
   input: {
-    height: hp(5),
-    backgroundColor: '#e0e0e0',
-    borderRadius: 10,
-    paddingHorizontal: wp(3),
+    height: hp(6),
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: wp(4),
     fontSize: wp(4),
   },
-
-  // Password Input Wrapper
   passwordInputWrapper: {
-    height: hp(5),
-    backgroundColor: '#e0e0e0',
-    borderRadius: 10,
+    height: hp(6),
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: wp(3),
-    paddingRight: wp(2),
+    paddingHorizontal: wp(4),
   },
   passwordInput: {
     flex: 1,
     fontSize: wp(4),
-    color: '#000',
   },
   eyeButton: {
     padding: wp(2),
   },
-
-  inputError: {
-    borderColor: 'red',
-    borderWidth: 1,
-  },
-  inputValid: {
-    borderColor: 'green',
-    borderWidth: 1,
-  },
+  inputError: { borderColor: 'red', borderWidth: 1 },
+  inputValid: { borderColor: 'green', borderWidth: 1 },
   errorText: {
-    fontSize: wp(3.5),
     color: 'red',
+    fontSize: wp(3.5),
     marginTop: hp(0.5),
   },
-
   button: {
-    height: hp(5),
+    height: hp(6),
     width: wp(80),
-    borderRadius: 10,
-    justifyContent: 'center',
     backgroundColor: '#0085FF',
-    marginVertical: hp(1),
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: hp(2),
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   textButton: {
+    color: '#fff',
     fontSize: wp(4.5),
-    color: 'white',
     fontWeight: '600',
-    textAlign: 'center',
   },
   text: {
     fontSize: wp(4),
-    color: 'black',
-    marginVertical: hp(1.5),
+    color: '#333',
+    marginVertical: hp(2),
   },
   iconview: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: hp(3),
+    gap: wp(6),
+    marginBottom: hp(4),
   },
   socialButton: {
-    height: hp(4),
-    width: hp(4),
-    borderRadius: 10,
+    width: 50,
+    height: 50,
     backgroundColor: '#fff',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: wp(3),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   socialIcon: {
-    width: wp(5),
-    height: wp(5),
+    width: 28,
+    height: 28,
     resizeMode: 'contain',
   },
   signupText: {
     fontSize: wp(4),
-    color: '#333',
-    textAlign: 'center',
+    color: '#555',
   },
   signup: {
     color: '#0085FF',
@@ -303,4 +307,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MyComponent;
+export default SignIn;
