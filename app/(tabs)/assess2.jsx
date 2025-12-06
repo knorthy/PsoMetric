@@ -14,10 +14,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function Assess2Screen() {
   const router = useRouter();
+
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  const handleSelectAssessment = (assessment) => {
+  console.log('Selected assessment:', assessment);
+  setHistoryVisible(false); 
+
+  };
 
   const [onsetDate, setOnsetDate] = useState('');
   const [symptomPattern, setSymptomPattern] = useState('');
@@ -76,6 +85,7 @@ export default function Assess2Screen() {
     </TouchableOpacity>
   );
 
+
   const SliderRow = ({ label, value }) => (
     <View style={styles.sliderRow}>
       <Text style={styles.sliderLabel}>{label}</Text>
@@ -88,7 +98,10 @@ export default function Assess2Screen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        onPress={() => setHistoryVisible(true)}
+        >
+          
           <Ionicons name="menu" size={28} color="#333" />
         </TouchableOpacity>
 
@@ -336,12 +349,22 @@ export default function Assess2Screen() {
       >
         <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <History
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onSelectAssessment={handleSelectAssessment}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff' 
+  },
+
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -351,6 +374,7 @@ const styles = StyleSheet.create({
     paddingBottom: hp(2.5),
     marginTop: Platform.select({ ios: 0, android: hp(1) }),
   },
+
   avatarContainer: {
     width: wp(9),
     height: wp(9),
@@ -359,10 +383,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  avatar: { width: '100%', height: '100%' },
-  content: { flex: 1, paddingHorizontal: wp(6), paddingTop: hp(2) },
 
-  // GREETING
+  avatar: { 
+    width: '100%', 
+    height: '100%' 
+  },
+
+  content: { 
+    flex: 1, 
+    paddingHorizontal: wp(6), 
+    paddingTop: hp(2) 
+  },
+
   greeting: {
     fontSize: hp(3),
     fontWeight: '600',
@@ -378,8 +410,8 @@ const styles = StyleSheet.create({
     marginBottom: hp(2),
     marginTop: hp(3),
   },
-  section: { marginBottom: hp(3) },
 
+  section: { marginBottom: hp(3) },
   questionText: {
     fontSize: hp(2),
     fontWeight: '600',
@@ -396,7 +428,6 @@ const styles = StyleSheet.create({
     fontSize: hp(1.5),
   },
 
-  /* RADIO */
   radioGroup: { gap: hp(1.2) },
   radioOption: {
     flexDirection: 'row',
@@ -406,11 +437,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
     borderRadius: 12,
   },
+
   radioOptionSelected: {
     backgroundColor: '#E5F1FF',
     borderColor: '#007AFF',
     borderWidth: 1,
   },
+
   radioCircle: {
     width: 20,
     height: 20,
@@ -421,33 +454,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: wp(3),
   },
+
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: '#007AFF',
   },
-  radioLabel: { fontSize: hp(1.5), color: '#666' },
-  radioLabelSelected: { color: '#007AFF', fontWeight: '500' },
 
-  /* SLIDER */
-  sliderContainer: { gap: hp(2.5) },
+  radioLabel: { 
+    fontSize: hp(1.5), 
+    color: '#666' 
+  },
+
+  radioLabelSelected: { 
+    color: '#007AFF', 
+    fontWeight: '500' 
+  },
+
+  sliderContainer: { 
+    gap: hp(2.5) 
+  },
+
   sliderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sliderLabel: { fontSize: hp(1.8), color: '#333' },
-  sliderValue: { fontSize: hp(1.8), fontWeight: '600', color: '#007AFF' },
-  slider: { height: 40 },
 
-  /* CHIPS */
+  sliderLabel: { 
+    fontSize: hp(1.8), 
+    color: '#333' 
+  },
+
+  sliderValue: { 
+    fontSize: hp(1.8), 
+    fontWeight: '600', 
+    color: '#007AFF' 
+  },
+
+  slider: { 
+    height: 40 
+  },
+
   chipGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: wp(2),
     marginTop: hp(1),
   },
+
   chip: {
     paddingHorizontal: wp(4),
     paddingVertical: hp(1),
@@ -456,14 +512,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
    },
+
   chipSelected: {
     backgroundColor: '#E5F1FF',
     borderColor: '#007AFF',
   },
-  chipText: { fontSize: hp(1.6), color: '#666' },
-  chipTextSelected: { color: '#007AFF', fontWeight: '500' },
 
-  /* FAB */
+  chipText: { 
+    fontSize: hp(1.6), 
+    color: '#666' 
+  },
+
+  chipTextSelected: { 
+    color: '#007AFF',
+    fontWeight: '500' 
+    },
+
   fab: {
     position: 'absolute',
     right: wp(6),
@@ -476,7 +540,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { 
+      width: 0, 
+      height: 4 
+    },
     shadowOpacity: 0.3,
     shadowRadius: 7,
     zIndex: 1000,

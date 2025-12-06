@@ -9,6 +9,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npm install
 
+   npm install expo
+
    npx expo install @react-native-picker/picker
 
    npm install @react-native-community/slider
