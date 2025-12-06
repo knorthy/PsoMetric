@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: hp(3.5),
     fontWeight: '700',
-    color: '#111',
+    color: '#ffffffff',
     textAlign: 'left',
     marginLeft: wp(-23),
     marginTop: hp(3.5),
@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: hp(1.75),
-    color: '#666',
+    color: '#ffffffff',
     textAlign: 'left',
     marginLeft: wp(-22),
     marginTop: hp(1),
     marginBottom: hp(1.5),
   },
   primaryButton: {
-    backgroundColor: '#61AFF2',
+    backgroundColor: '#ffffffff',
     paddingVertical: hp(1.5),
     borderRadius: wp(4),
     width: wp(80),
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     marginTop: hp(3.5),
   },
   primaryButtonText: {
-    color: '#ffffffff',
+    color: '#348fccff',
     fontWeight: '700',
     fontSize: hp(2),
   },
@@ -241,11 +241,11 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: hp(1.5),
-    color: '#666',
+    color: '#ffffffff',
     textAlign: 'center',
   },
   termsLink: {
-    color: '#61AFF2',
+    color: '#ffffffff',
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
