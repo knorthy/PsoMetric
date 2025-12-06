@@ -12,6 +12,9 @@ import Animated, {
 import SignupBottomSheet from '../../components/SignupBottomSheet.jsx';
 import { hp, wp } from '../../helpers/common';
 
+//testing lang para endi mag duplicate skia
+const GradientBackground = require('../../components/GradientBackground.jsx').default;
+
 const ITEM_WIDTH = wp(80);
 const ITEM_SPACING = wp(10);
 
@@ -45,77 +48,81 @@ export default function Welcome() {
     Linking.openURL('https://www.example.com/terms').catch(() => {});
   };
 
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: hp(2.5) }}>
-          <View style={{ alignItems: 'center' }}>
-            <Animated.FlatList
-              data={data}
-              keyExtractor={(_, index) => index.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: ITEM_SPACING, paddingBottom: 0 }} 
-              snapToInterval={ITEM_WIDTH}
-              decelerationRate="fast"
-              onScroll={scrollHandler}
-              scrollEventThrottle={16}
-              renderItem={({ item, index }) => {
-                return <AnimatedItem item={item} index={index} scrollX={scrollX} />;
-              }}
-            />
-            <Dots data={data} scrollX={scrollX} />
-            <View style={styles.content}>
-              <Text style={styles.title}>See Beyond the{"\n"}Surface</Text>
-              <Text style={styles.tagline}>Gain control over your condition.</Text>
-  
-              <TouchableOpacity
-                style={styles.primaryButton}                                      
-                onPress={() => handleSnapPress(0)}>
-                <Text style={styles.primaryButtonText}>Let's Get Started</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleTermsPress} style={styles.termsContainer} activeOpacity={0.7}>     
-                <Text style={styles.termsText}>
-                  By continuing you agree to our <Text style={styles.termsLink}>Terms & Conditions</Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      
+      <View style={StyleSheet.absoluteFill}>
+        <GradientBackground />
+      </View>
+      
+      <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: hp(2.5) }}>
+        <View style={{ alignItems: 'center' }}>
+          <Animated.FlatList
+            data={data}
+            keyExtractor={(_, index) => index.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: ITEM_SPACING, paddingBottom: 0 }} 
+            snapToInterval={ITEM_WIDTH}
+            decelerationRate="fast"
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => {
+              return <AnimatedItem item={item} index={index} scrollX={scrollX} />;
+            }}
+          />
+          <Dots data={data} scrollX={scrollX} />
+          <View style={styles.content}>
+            <Text style={styles.title}>See Beyond the{"\n"}Surface</Text>
+            <Text style={styles.tagline}>Gain control over your condition.</Text>
+
+            <TouchableOpacity
+              style={styles.primaryButton}                                      
+              onPress={() => handleSnapPress(0)}>
+              <Text style={styles.primaryButtonText}>Let's Get Started</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleTermsPress} style={styles.termsContainer} activeOpacity={0.7}>     
+              <Text style={styles.termsText}>
+                By continuing you agree to our <Text style={styles.termsLink}>Terms & Conditions</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
-          <BottomSheetModalProvider>
-            <BottomSheetModal
-              ref={sheetRef}
-              snapPoints={snapPoints}
-              enablePanDownToClose={true}
-              onDismiss={() => setisOpen(false)}
-              backdropComponent={(props) => (
-                <BottomSheetBackdrop                      // for darkening background
-                  {...props}
-                  appearsOnIndex={0}       
-                  disappearsOnIndex={-1}   
-                  opacity={0.45}           
-                  pressBehavior="close"    
-                />
-              )}
-            >
-              <BottomSheetView>
-                <SignupBottomSheet
-                  onPick={(role) => {
-              
-                    sheetRef.current?.dismiss();
-                    
-                    setTimeout(() => {
-                      if (role === 'create') router.push('/create');
-                      else if (role === 'login') router.push('/signin');
-                    }, 220);
-                  }}
-                  onClose={() => sheetRef.current?.dismiss()}
-                />
-              </BottomSheetView>
-            </BottomSheetModal>
-          </BottomSheetModalProvider>
         </View>
-      </GestureHandlerRootView>
-    );
-  }
+        <BottomSheetModalProvider>
+          <BottomSheetModal
+            ref={sheetRef}
+            snapPoints={snapPoints}
+            enablePanDownToClose={true}
+            onDismiss={() => setisOpen(false)}
+            backdropComponent={(props) => (
+              <BottomSheetBackdrop
+                {...props}
+                appearsOnIndex={0}       
+                disappearsOnIndex={-1}   
+                opacity={0.45}           
+                pressBehavior="close"    
+              />
+            )}
+          >
+            <BottomSheetView>
+              <SignupBottomSheet
+                onPick={(role) => {
+                  sheetRef.current?.dismiss();
+                  
+                  setTimeout(() => {
+                    if (role === 'create') router.push('/create');
+                    else if (role === 'login') router.push('/signin');
+                  }, 220);
+                }}
+                onClose={() => sheetRef.current?.dismiss()}
+              />
+            </BottomSheetView>
+          </BottomSheetModal>
+        </BottomSheetModalProvider>
+      </View>
+    </GestureHandlerRootView>
+  );
+}
 
 function AnimatedItem({ item, index, scrollX }) {
   const animatedStyle = useAnimatedStyle(() => {
@@ -195,7 +202,7 @@ const styles = StyleSheet.create({
   },
   dot: {
     height: wp(2),
-    backgroundColor: 'gray',
+    backgroundColor: '#ffffffff',
     borderRadius: wp(1),
     marginHorizontal: wp(1),
   },
