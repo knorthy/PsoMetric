@@ -13,17 +13,25 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function SymptomAssessmentScreen() {
-  // Existing state
+ 
   const [gender, setGender] = useState('');
   const [psoriasisHistory, setPsoriasisHistory] = useState('');
   const [age, setAge] = useState('');
 
   const router = useRouter();
 
-  // New multi-select states
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  const handleSelectAssessment = (assessment) => {
+  console.log('Selected assessment:', assessment);
+  setHistoryVisible(false); 
+
+  };
+
   const [location, setLocation] = useState([]);
   const [appearance, setAppearance] = useState([]);
   const [size, setSize] = useState([]);
@@ -60,7 +68,6 @@ export default function SymptomAssessmentScreen() {
     </TouchableOpacity>
   );
 
-  // Helper component for Question + Note
   const QuestionWithNote = ({ question, note }) => (
     <View style={styles.questionContainer}>
       <Text style={styles.questionText}>{question}</Text>
@@ -73,7 +80,8 @@ export default function SymptomAssessmentScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        onPress={() => setHistoryVisible(true)}>
           <Ionicons name="menu" size={28} color="#333" />
         </TouchableOpacity>
 
@@ -303,6 +311,13 @@ export default function SymptomAssessmentScreen() {
       >
         <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+        <History
+              visible={historyVisible}
+              onClose={() => setHistoryVisible(false)}
+              onSelectAssessment={handleSelectAssessment}
+            />
+
     </SafeAreaView>
   );
 }
@@ -318,6 +333,7 @@ const styles = StyleSheet.create({
     paddingBottom: hp(2.5),
     marginTop: Platform.select({ ios: 0, android: hp(1) }),
   },
+
   avatarContainer: {
     width: wp(9),
     height: wp(9),
@@ -326,8 +342,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  avatar: { width: '100%', height: '100%' },
-  content: { flex: 1, paddingHorizontal: wp(6), paddingTop: hp(2) },
+
+  avatar: { 
+    width: '100%', 
+    height: '100%' 
+  },
+
+  content: { 
+    flex: 1, 
+    paddingHorizontal: wp(6), 
+    paddingTop: hp(2) 
+  },
+
   greeting: {
     fontSize: hp(3),
     fontWeight: '600',
@@ -335,13 +361,17 @@ const styles = StyleSheet.create({
     marginBottom: hp(3),
     lineHeight: hp(3.8),
   },
+
   sectionTitle: {
     fontSize: hp(2.4),
     fontWeight: '600',
     color: '#333',
     marginBottom: hp(3),
   },
-  section: { marginBottom: hp(3) },
+
+  section: { 
+    marginBottom: hp(3) 
+  },
 
   /* LABEL */
   label: {
@@ -352,13 +382,17 @@ const styles = StyleSheet.create({
   },
 
   /* QUESTION + NOTE */
-  questionContainer: { marginBottom: hp(1.5) },
+  questionContainer: { 
+    marginBottom: hp(1.5) 
+  },
+
   questionText: {
     fontSize: hp(2),
     fontWeight: '600',
     color: '#000',
     lineHeight: hp(3.2),
   },
+
   noteText: {
     fontSize: hp(1.5),
     color: '#666',
@@ -367,7 +401,10 @@ const styles = StyleSheet.create({
   },
 
   /* RADIO */
-  radioGroup: { gap: hp(1.5) },
+  radioGroup: { 
+    gap: hp(1.5) 
+  },
+
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -376,11 +413,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
     borderRadius: 12,
   },
+
   radioOptionSelected: {
     backgroundColor: '#E5F1FF',
     borderColor: '#007AFF',
     borderWidth: 1,
   },
+
   radioCircle: {
     width: 20,
     height: 20,
@@ -391,12 +430,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: wp(3),
   },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#007AFF' },
-  radioLabel: { fontSize: hp(1.5), color: '#666' },
-  radioLabelSelected: { color: '#007AFF', fontWeight: '500' },
+
+  radioDot: { 
+    width: 10, 
+    height: 10, 
+    borderRadius: 5, 
+    backgroundColor: '#007AFF' 
+  },
+
+  radioLabel: { 
+    fontSize: hp(1.5), 
+    color: '#666' 
+  },
+
+  radioLabelSelected: { 
+    color: '#007AFF', 
+    fontWeight: '500' 
+  },
 
   /* CHECKBOX */
-  checkboxGroup: { gap: hp(1.5) },
+  checkboxGroup: { 
+    gap: hp(1.5) 
+  },
+
   checkboxOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,11 +461,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
     borderRadius: 12,
   },
+
   checkboxOptionSelected: {
     backgroundColor: '#E5F1FF',
     borderColor: '#007AFF',
     borderWidth: 1,
   },
+
   checkboxBox: {
     width: 20,
     height: 20,
@@ -420,9 +478,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: wp(3),
   },
-  checkboxCheck: { width: 10, height: 10, borderRadius: 2, backgroundColor: '#007AFF' },
-  checkboxLabel: { fontSize: hp(1.5), color: '#666' },
-  checkboxLabelSelected: { color: '#007AFF', fontWeight: '500' },
+
+  checkboxCheck: { 
+    width: 10, 
+    height: 10, 
+    borderRadius: 2, 
+    backgroundColor: '#007AFF' 
+  },
+  
+  checkboxLabel: { 
+    fontSize: hp(1.5), 
+    color: '#666' },
+  checkboxLabelSelected: { 
+    color: '#007AFF', 
+    fontWeight: '500' 
+  },
 
   textInput: {
     backgroundColor: '#F2F2F7',

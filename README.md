@@ -9,6 +9,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npm install
 
+   npm install expo
+
    npx expo install @react-native-picker/picker
 
    npm install @react-native-community/slider
@@ -17,11 +19,16 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    expo install expo-image-picker
 
+   npx expo install @expo/vector-icons
+
    npm i @react-native-async-storage/async-storage
 
    npx expo install @react-navigation/native @react-navigation/native-stack
-   
+
    npx expo install react-native-screens react-native-safe-area-context
+
+   npx expo install @shopify/react-native-skia
+
    ```
 
 2. Start the app
