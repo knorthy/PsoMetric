@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import GradientBackground from '../../components/invertedGB';
 import { hp, wp } from '../../helpers/common';
 
 const SignUpScreen = () => {
@@ -79,130 +80,137 @@ const SignUpScreen = () => {
   };
 
   return (
-    <ScreenWrapper bg="white">
-      <View style={styles.container}>
-        <Text style={styles.title}>Create your account</Text>
+    <ScreenWrapper bg="transparent">
+      <View style={styles.wrapper}>
+        <GradientBackground />
+        <View style={styles.container}>
+          <Text style={styles.title}>Create your account</Text>
 
-        {/* Name */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={[styles.input, name && styles.inputValid]}
-            placeholder="ex: jan.smith"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Email */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, emailError ? styles.inputError : email && styles.inputValid]}
-            placeholder="ex: jan.smith@email.com"
-            value={email}
-            onChangeText={validateEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        </View>
-
-        {/* Password */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <View style={[styles.passwordWrapper, passwordError ? styles.inputError : password && styles.inputValid]}>
+          {/* Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Name</Text>
             <TextInput
-              style={styles.passwordInput}
-              placeholder="Create password"
-              value={password}
-              onChangeText={validatePassword}
-              secureTextEntry={!showPassword}
+              style={[styles.input, name && styles.inputValid]}
+              placeholder="ex: jan.smith"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          </View>
+
+          {/* Email */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, emailError ? styles.inputError : email && styles.inputValid]}
+              placeholder="ex: jan.smith@email.com"
+              value={email}
+              onChangeText={validateEmail}
+              keyboardType="email-address"
               autoCapitalize="none"
             />
-            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eye}>
-              <MaterialIcons
-                name={showPassword ? 'visibility' : 'visibility-off'}
-                size={22}
-                color="#666"
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          </View>
+
+          {/* Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <View style={[styles.passwordWrapper, passwordError ? styles.inputError : password && styles.inputValid]}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Create password"
+                value={password}
+                onChangeText={validatePassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
               />
+              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eye}>
+                <MaterialIcons
+                  name={showPassword ? 'visibility' : 'visibility-off'}
+                  size={22}
+                  color="#666"
+                />
+              </Pressable>
+            </View>
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          </View>
+
+          {/* Confirm Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <View
+              style={[
+                styles.passwordWrapper,
+                confirmPassword && password === confirmPassword && styles.inputValid,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eye}>
+                <MaterialIcons
+                  name={showConfirmPassword ? 'visibility' : 'visibility-off'}
+                  size={22}
+                  color="#666"
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Beautiful Checkbox */}
+          <View style={styles.checkboxContainer}>
+            <Pressable
+              style={[styles.customCheckbox, checked && styles.customCheckboxChecked]}
+              onPress={toggleCheckbox}
+            >
+              {checked && <MaterialIcons name="check" size={18} color="white" />}
+            </Pressable>
+            <Text style={styles.checkboxLabel}>
+              I understood the <Text style={styles.linkText}>terms & policy</Text>.
+            </Text>
+          </View>
+
+          {/* Submit Button */}
+          <Pressable style={styles.button} onPress={handleSubmit}>
+            <Text style={styles.buttonText}>Let's Get Started</Text>
+          </Pressable>
+
+          <Text style={styles.orText}>Or sign up with</Text>
+
+          <View style={styles.socialRow}>
+            <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Google' })}>
+              <Image source={require('../../assets/images/googlelogo.png')} style={styles.socialIcon} />
+            </Pressable>
+            <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Facebook' })}>
+              <Image source={require('../../assets/images/fblogo.png')} style={styles.socialIcon} />
+            </Pressable>
+            <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Twitter' })}>
+              <Image source={require('../../assets/images/twitterlogo.png')} style={styles.socialIcon} />
             </Pressable>
           </View>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-        </View>
 
-        {/* Confirm Password */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <View
-            style={[
-              styles.passwordWrapper,
-              confirmPassword && password === confirmPassword && styles.inputValid,
-            ]}
-          >
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-            />
-            <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eye}>
-              <MaterialIcons
-                name={showConfirmPassword ? 'visibility' : 'visibility-off'}
-                size={22}
-                color="#666"
-              />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Beautiful Checkbox */}
-        <View style={styles.checkboxContainer}>
-          <Pressable
-            style={[styles.customCheckbox, checked && styles.customCheckboxChecked]}
-            onPress={toggleCheckbox}
-          >
-            {checked && <MaterialIcons name="check" size={18} color="white" />}
-          </Pressable>
-          <Text style={styles.checkboxLabel}>
-            I understood the <Text style={styles.linkText}>terms & policy</Text>.
+          <Text style={styles.footerText}>
+            Already have an account?{' '}
+            <Text style={styles.loginLink} onPress={() => router.push('/signin')}>
+              Login
+            </Text>
           </Text>
         </View>
-
-        {/* Submit Button */}
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Let's Get Started</Text>
-        </Pressable>
-
-        <Text style={styles.orText}>Or sign up with</Text>
-
-        <View style={styles.socialRow}>
-          <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Google' })}>
-            <Image source={require('../../assets/images/googlelogo.png')} style={styles.socialIcon} />
-          </Pressable>
-          <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Facebook' })}>
-            <Image source={require('../../assets/images/fblogo.png')} style={styles.socialIcon} />
-          </Pressable>
-          <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Twitter' })}>
-            <Image source={require('../../assets/images/twitterlogo.png')} style={styles.socialIcon} />
-          </Pressable>
-        </View>
-
-        <Text style={styles.footerText}>
-          Already have an account?{' '}
-          <Text style={styles.loginLink} onPress={() => router.push('/signin')}>
-            Login
-          </Text>
-        </Text>
       </View>
     </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
     alignItems: 'center',
@@ -212,7 +220,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: wp(7),
     fontWeight: 'bold',
-    color: '#000',
+    color: '#ffffffff',
     marginBottom: hp(4),
   },
   inputGroup: {
@@ -221,23 +229,27 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: wp(4),
-    color: '#333',
+    color: '#ffffffff',
     marginBottom: hp(0.8),
   },
   input: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     paddingHorizontal: wp(4),
     fontSize: wp(4.2),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   passwordWrapper: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: wp(4),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   passwordInput: {
     flex: 1,

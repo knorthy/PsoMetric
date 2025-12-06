@@ -1,6 +1,6 @@
 import { Canvas, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
 import { StyleSheet, View } from 'react-native';
-import { hp, wp } from '../helpers/common';
+import { hp, wp } from '../../helpers/common';
 
 export default function GradientBackground() {
   return (
@@ -21,7 +21,7 @@ export default function GradientBackground() {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: '#FFFFFF',
   },
   canvas: {
