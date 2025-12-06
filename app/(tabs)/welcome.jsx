@@ -1,7 +1,7 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   interpolate,
@@ -10,10 +10,10 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 import SignupBottomSheet from '../../components/SignupBottomSheet.jsx';
+import { hp, wp } from '../../helpers/common';
 
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width * 0.8;
-const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
+const ITEM_WIDTH = wp(80);
+const ITEM_SPACING = wp(10);
 
 const data = [
   { image: require('../../assets/images/welcome/image_1.png') },
@@ -47,7 +47,7 @@ export default function Welcome() {
 
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 20 }}>
+        <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: hp(2.5) }}>
           <View style={{ alignItems: 'center' }}>
             <Animated.FlatList
               data={data}
@@ -173,73 +173,74 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: hp(6),
   },
   innerItem: {
     width: '100%',
-    height: '70%',
+    height: hp(42),
     backgroundColor: 'whiteSmoke',
-    borderRadius: 16,
+    borderRadius: wp(3),
     marginBottom: 0, 
   },
   image: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: wp(3),
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -70, 
+    marginTop: hp(4), 
   },
   dot: {
-    height: 8,
+    height: wp(2),
     backgroundColor: 'gray',
-    borderRadius: 4,
-    marginHorizontal: 4,
+    borderRadius: wp(1),
+    marginHorizontal: wp(1),
   },
   content: {
     width: '100%',
-    paddingHorizontal: 24,
+    paddingHorizontal: wp(6),
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: hp(2),
   },
   title: {
-    fontSize: 28,
+    fontSize: hp(3.5),
     fontWeight: '700',
     color: '#111',
     textAlign: 'left',
-    marginLeft: -90,
-    marginTop: 50,
-    lineHeight: 34,
+    marginLeft: wp(-23),
+    marginTop: hp(3.5),
+    lineHeight: hp(4.2),
   },
   tagline: {
-    fontSize: 14,
+    fontSize: hp(1.75),
     color: '#666',
     textAlign: 'left',
-    marginLeft: -90,
-    marginTop: 8,
-    marginBottom: 12,
+    marginLeft: wp(-22),
+    marginTop: hp(1),
+    marginBottom: hp(1.5),
   },
   primaryButton: {
     backgroundColor: '#61AFF2',
-    paddingVertical: 12,
-    borderRadius: 15,
-    width: '80%',
+    paddingVertical: hp(1.5),
+    borderRadius: wp(4),
+    width: wp(80),
     alignItems: 'center',
-    marginTop: 35,
+    marginTop: hp(3.5),
   },
   primaryButtonText: {
     color: '#ffffffff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: hp(2),
   },
   termsContainer: {
-    marginTop: 19,
-    paddingHorizontal: 16,
+    marginTop: hp(2.5),
+    paddingHorizontal: wp(4),
   },
   termsText: {
-    fontSize: 12,
+    fontSize: hp(1.5),
     color: '#666',
     textAlign: 'center',
   },
