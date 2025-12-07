@@ -1,5 +1,3 @@
-// File: app/signin.jsx (or wherever your sign-in screen is)
-
 import { signIn, signInWithRedirect } from '@aws-amplify/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,13 +7,18 @@ import {
   Image,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import GradientBackground from '../../components/invertedGB';
 import { hp, wp } from '../../helpers/common';
+
+const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
+const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
 
 const SignIn = () => {
   const router = useRouter();
@@ -26,6 +29,7 @@ const SignIn = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   // Validation helpers
   const isValidEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -89,116 +93,127 @@ const SignIn = () => {
   };
 
   return (
-    <ScreenWrapper bg="white">
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Title */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Sign in your account</Text>
-        </View>
+    <ScreenWrapper bg="transparent">
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <View style={styles.wrapper}>
+        <GradientBackground />
+        <ScrollView contentContainerStyle={styles.container}>
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Sign in your account</Text>
+          </View>
 
-        {/* Email */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.labelText}>Email</Text>
-          <TextInput
-            style={[
-              styles.input,
-              emailError ? styles.inputError : email && styles.inputValid,
-            ]}
-            placeholder="ex: jan.smith@email.com"
-            value={email}
-            onChangeText={validateEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        </View>
-
-        {/* Password */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.labelText}>Password</Text>
-          <View
-            style={[
-              styles.passwordInputWrapper,
-              passwordError ? styles.inputError : password && styles.inputValid,
-            ]}
-          >
+          {/* Email */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.labelText}>Email</Text>
             <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter password"
-              value={password}
-              onChangeText={validatePassword}
-              secureTextEntry={!showPassword}
+              style={[
+                styles.input,
+                emailError ? styles.inputError : email && styles.inputValid,
+              ]}
+              placeholder="ex: jan.smith@email.com"
+              placeholderTextColor={focusedField === 'email' || email ? PLACEHOLDER_COLOR_ACTIVE : PLACEHOLDER_COLOR}
+              value={email}
+              onChangeText={validateEmail}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-              <MaterialIcons
-                name={showPassword ? 'visibility' : 'visibility-off'}
-                size={24}
-                color="#666"
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          </View>
+
+          {/* Password */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.labelText}>Password</Text>
+            <View
+              style={[
+                styles.passwordInputWrapper,
+                passwordError ? styles.inputError : password && styles.inputValid,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter password"
+                placeholderTextColor={focusedField === 'password' || password ? PLACEHOLDER_COLOR_ACTIVE : PLACEHOLDER_COLOR}
+                value={password}
+                onChangeText={validatePassword}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                <MaterialIcons
+                  name={showPassword ? 'visibility' : 'visibility-off'}
+                  size={24}
+                  color="#ccc"
+                />
+              </Pressable>
+            </View>
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          </View>
+
+          {/* SIGN IN BUTTON */}
+          <Pressable
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.textButton}>
+              {loading ? 'SIGNING IN...' : 'SIGN IN'}
+            </Text>
+          </Pressable>
+
+          {/* Social Login */}
+          <Text style={styles.text}>Or sign in with</Text>
+          <View style={styles.iconview}>
+            <Pressable
+              style={styles.socialButton}
+              onPress={() => signInWithRedirect({ provider: 'Google' })}
+            >
+              <Image
+                source={require('../../assets/images/googlelogo.png')}
+                style={styles.socialIcon}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.socialButton}
+              onPress={() => signInWithRedirect({ provider: 'Facebook' })}
+            >
+              <Image
+                source={require('../../assets/images/fblogo.png')}
+                style={styles.socialIcon}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.socialButton}
+              onPress={() => signInWithRedirect({ provider: 'Twitter' })}
+            >
+              <Image
+                source={require('../../assets/images/twitterlogo.png')}
+                style={styles.socialIcon}
               />
             </Pressable>
           </View>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-        </View>
 
-        {/* SIGN IN BUTTON */}
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignIn}
-          disabled={loading}
-        >
-          <Text style={styles.textButton}>
-            {loading ? 'SIGNING IN...' : 'SIGN IN'}
+          {/* Sign Up Link */}
+          <Text style={styles.signupText}>
+            Don't have an account?{' '}
+            <Text style={styles.signup} onPress={() => router.push('/create')}>
+              SIGN UP
+            </Text>
           </Text>
-        </Pressable>
-
-        {/* Social Login */}
-        <Text style={styles.text}>Or sign in with</Text>
-        <View style={styles.iconview}>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Google' })}
-          >
-            <Image
-              source={require('../../assets/images/googlelogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Facebook' })}
-          >
-            <Image
-              source={require('../../assets/images/fblogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Twitter' })}
-          >
-            <Image
-              source={require('../../assets/images/twitterlogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-        </View>
-
-        {/* Sign Up Link */}
-        <Text style={styles.signupText}>
-          Don’t have an account?{' '}
-          <Text style={styles.signup} onPress={() => router.push('/create')}>
-            SIGN UP
-          </Text>
-        </Text>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: { flex: 1, position: 'relative' },
   container: {
     alignItems: 'center',
     paddingBottom: hp(5),
@@ -212,7 +227,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: wp(6.5),
     fontWeight: 'bold',
-    color: '#000',
+    color: '#ffffff',
   },
   inputContainer: {
     width: wp(80),
@@ -220,42 +235,48 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: wp(4),
-    color: '#000',
+    color: '#ffffff',
     marginBottom: hp(0.5),
   },
   input: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     paddingHorizontal: wp(4),
     fontSize: wp(4),
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   passwordInputWrapper: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: wp(4),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   passwordInput: {
     flex: 1,
     fontSize: wp(4),
+    color: '#fff',
   },
   eyeButton: {
     padding: wp(2),
   },
-  inputError: { borderColor: 'red', borderWidth: 1 },
-  inputValid: { borderColor: 'green', borderWidth: 1 },
+  inputError: { borderColor: '#ff4444', borderWidth: 1.5 },
+  inputValid: { borderColor: '#00C853', borderWidth: 1.5 },
   errorText: {
-    color: 'red',
+    color: '#ff4444',
     fontSize: wp(3.5),
     marginTop: hp(0.5),
   },
   button: {
     height: hp(6),
     width: wp(80),
-    backgroundColor: '#0085FF',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -265,13 +286,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   textButton: {
-    color: '#fff',
+    color: '#50a2ffff',
     fontSize: wp(4.5),
     fontWeight: '600',
   },
   text: {
     fontSize: wp(4),
-    color: '#333',
+    color: '#ffffffff',
     marginVertical: hp(2),
   },
   iconview: {
@@ -299,7 +320,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontSize: wp(4),
-    color: '#555',
+    color: '#666',
   },
   signup: {
     color: '#0085FF',
