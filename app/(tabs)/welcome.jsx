@@ -1,7 +1,7 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   interpolate,
@@ -10,10 +10,13 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 import SignupBottomSheet from '../../components/SignupBottomSheet.jsx';
+import { hp, wp } from '../../helpers/common';
 
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width * 0.8;
-const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
+//testing lang para endi mag duplicate skia
+const GradientBackground = require('../../components/GradientBackground.jsx').default;
+
+const ITEM_WIDTH = wp(80);
+const ITEM_SPACING = wp(10);
 
 const data = [
   { image: require('../../assets/images/welcome/image_1.png') },
@@ -45,77 +48,81 @@ export default function Welcome() {
     Linking.openURL('https://www.example.com/terms').catch(() => {});
   };
 
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 20 }}>
-          <View style={{ alignItems: 'center' }}>
-            <Animated.FlatList
-              data={data}
-              keyExtractor={(_, index) => index.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: ITEM_SPACING, paddingBottom: 0 }} 
-              snapToInterval={ITEM_WIDTH}
-              decelerationRate="fast"
-              onScroll={scrollHandler}
-              scrollEventThrottle={16}
-              renderItem={({ item, index }) => {
-                return <AnimatedItem item={item} index={index} scrollX={scrollX} />;
-              }}
-            />
-            <Dots data={data} scrollX={scrollX} />
-            <View style={styles.content}>
-              <Text style={styles.title}>See Beyond the{"\n"}Surface</Text>
-              <Text style={styles.tagline}>Gain control over your condition.</Text>
-  
-              <TouchableOpacity
-                style={styles.primaryButton}                                      
-                onPress={() => handleSnapPress(0)}>
-                <Text style={styles.primaryButtonText}>Let's Get Started</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleTermsPress} style={styles.termsContainer} activeOpacity={0.7}>     
-                <Text style={styles.termsText}>
-                  By continuing you agree to our <Text style={styles.termsLink}>Terms & Conditions</Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      
+      <View style={StyleSheet.absoluteFill}>
+        <GradientBackground />
+      </View>
+      
+      <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: hp(2.5) }}>
+        <View style={{ alignItems: 'center' }}>
+          <Animated.FlatList
+            data={data}
+            keyExtractor={(_, index) => index.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: ITEM_SPACING, paddingBottom: 0 }} 
+            snapToInterval={ITEM_WIDTH}
+            decelerationRate="fast"
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => {
+              return <AnimatedItem item={item} index={index} scrollX={scrollX} />;
+            }}
+          />
+          <Dots data={data} scrollX={scrollX} />
+          <View style={styles.content}>
+            <Text style={styles.title}>See Beyond the{"\n"}Surface</Text>
+            <Text style={styles.tagline}>Gain control over your condition.</Text>
+
+            <TouchableOpacity
+              style={styles.primaryButton}                                      
+              onPress={() => handleSnapPress(0)}>
+              <Text style={styles.primaryButtonText}>Let's Get Started</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleTermsPress} style={styles.termsContainer} activeOpacity={0.7}>     
+              <Text style={styles.termsText}>
+                By continuing you agree to our <Text style={styles.termsLink}>Terms & Conditions</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
-          <BottomSheetModalProvider>
-            <BottomSheetModal
-              ref={sheetRef}
-              snapPoints={snapPoints}
-              enablePanDownToClose={true}
-              onDismiss={() => setisOpen(false)}
-              backdropComponent={(props) => (
-                <BottomSheetBackdrop                      // for darkening background
-                  {...props}
-                  appearsOnIndex={0}       
-                  disappearsOnIndex={-1}   
-                  opacity={0.45}           
-                  pressBehavior="close"    
-                />
-              )}
-            >
-              <BottomSheetView>
-                <SignupBottomSheet
-                  onPick={(role) => {
-              
-                    sheetRef.current?.dismiss();
-                    
-                    setTimeout(() => {
-                      if (role === 'create') router.push('/create');
-                      else if (role === 'login') router.push('/signin');
-                    }, 220);
-                  }}
-                  onClose={() => sheetRef.current?.dismiss()}
-                />
-              </BottomSheetView>
-            </BottomSheetModal>
-          </BottomSheetModalProvider>
         </View>
-      </GestureHandlerRootView>
-    );
-  }
+        <BottomSheetModalProvider>
+          <BottomSheetModal
+            ref={sheetRef}
+            snapPoints={snapPoints}
+            enablePanDownToClose={true}
+            onDismiss={() => setisOpen(false)}
+            backdropComponent={(props) => (
+              <BottomSheetBackdrop
+                {...props}
+                appearsOnIndex={0}       
+                disappearsOnIndex={-1}   
+                opacity={0.45}           
+                pressBehavior="close"    
+              />
+            )}
+          >
+            <BottomSheetView>
+              <SignupBottomSheet
+                onPick={(role) => {
+                  sheetRef.current?.dismiss();
+                  
+                  setTimeout(() => {
+                    if (role === 'create') router.push('/create');
+                    else if (role === 'login') router.push('/signin');
+                  }, 220);
+                }}
+                onClose={() => sheetRef.current?.dismiss()}
+              />
+            </BottomSheetView>
+          </BottomSheetModal>
+        </BottomSheetModalProvider>
+      </View>
+    </GestureHandlerRootView>
+  );
+}
 
 function AnimatedItem({ item, index, scrollX }) {
   const animatedStyle = useAnimatedStyle(() => {
@@ -173,78 +180,79 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: hp(6),
   },
   innerItem: {
     width: '100%',
-    height: '70%',
+    height: hp(42),
     backgroundColor: 'whiteSmoke',
-    borderRadius: 16,
+    borderRadius: wp(3),
     marginBottom: 0, 
   },
   image: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: wp(3),
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -70, 
+    marginTop: hp(4), 
   },
   dot: {
-    height: 8,
-    backgroundColor: 'gray',
-    borderRadius: 4,
-    marginHorizontal: 4,
+    height: wp(2),
+    backgroundColor: '#ffffffff',
+    borderRadius: wp(1),
+    marginHorizontal: wp(1),
   },
   content: {
     width: '100%',
-    paddingHorizontal: 24,
+    paddingHorizontal: wp(6),
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: hp(2),
   },
   title: {
-    fontSize: 28,
+    fontSize: hp(3.5),
     fontWeight: '700',
-    color: '#111',
+    color: '#ffffffff',
     textAlign: 'left',
-    marginLeft: -90,
-    marginTop: 50,
-    lineHeight: 34,
+    marginLeft: wp(-23),
+    marginTop: hp(3.5),
+    lineHeight: hp(4.2),
   },
   tagline: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: hp(1.75),
+    color: '#ffffffff',
     textAlign: 'left',
-    marginLeft: -90,
-    marginTop: 8,
-    marginBottom: 12,
+    marginLeft: wp(-22),
+    marginTop: hp(1),
+    marginBottom: hp(1.5),
   },
   primaryButton: {
-    backgroundColor: '#61AFF2',
-    paddingVertical: 12,
-    borderRadius: 15,
-    width: '80%',
+    backgroundColor: '#ffffffff',
+    paddingVertical: hp(1.5),
+    borderRadius: wp(4),
+    width: wp(80),
     alignItems: 'center',
-    marginTop: 35,
+    marginTop: hp(3.5),
   },
   primaryButtonText: {
-    color: '#ffffffff',
+    color: '#348fccff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: hp(2),
   },
   termsContainer: {
-    marginTop: 19,
-    paddingHorizontal: 16,
+    marginTop: hp(2.5),
+    paddingHorizontal: wp(4),
   },
   termsText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: hp(1.5),
+    color: '#ffffffff',
     textAlign: 'center',
   },
   termsLink: {
-    color: '#61AFF2',
+    color: '#ffffffff',
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
