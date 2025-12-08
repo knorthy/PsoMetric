@@ -4,27 +4,28 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
-import { getAuthHeaders, getCognitoAuth } from '../../helpers/auth';
 import { hp, wp } from '../../helpers/common';
+import { setTempData } from '../../helpers/dataStore';
+import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
 
 // ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-const BACKEND_UPLOAD_URL = 'http://192.168.31.117:8000/analyze/';
-const QUESTIONNAIRE_SUBMIT_URL = 'http://192.168.31.117:8000/questionnaire/submit';
+const BACKEND_UPLOAD_URL = 'http://192.168.68.109:8000/analyze/';
+const QUESTIONNAIRE_SUBMIT_URL = 'http://192.168.68.109:8000/questionnaire/submit';
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
@@ -52,7 +53,7 @@ export default function CameraWelcome() {
     try {
       // Get auth token before proceeding
       const authHeaders = await getAuthHeaders();
-      const cognitoAuth = await getCognitoAuth();
+      const cognitoAuth = await getCurrentUser();
       
       if (!cognitoAuth) {
         Alert.alert(
@@ -115,7 +116,7 @@ export default function CameraWelcome() {
         method: 'POST',
         body: formData,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          // 'Content-Type': 'multipart/form-data', // ❌ Don't set this manually for FormData!
           ...authHeaders, // Add JWT token
         },
       });
@@ -183,18 +184,20 @@ export default function CameraWelcome() {
       }
 
       // 5. Navigate to Result Screen with Both Data Sources
+      // Store large data in temp storage to avoid navigation param limits
+      const resultId = Date.now().toString();
+      setTempData(`analysis_${resultId}`, data);
+      setTempData(`questionnaire_${resultId}`, questionnaireResponse);
+
       router.push({
         pathname: '/(tabs)/result',
         params: {
-          // Image analysis
-          analysisResult: JSON.stringify(data),
+          resultId: resultId,
           images: [uri],
           // Questionnaire data (for display)
           ...questionnaireData.screen1,
           ...questionnaireData.screen2,
           ...questionnaireData.screen3,
-          // Backend questionnaire response (GenAI recommendations)
-          questionnaireResult: questionnaireResponse ? JSON.stringify(questionnaireResponse) : null,
         }
       });
 

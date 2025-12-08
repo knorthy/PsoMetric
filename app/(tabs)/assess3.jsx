@@ -454,7 +454,7 @@ export default function Assess3Screen() {
               feverInfection,
               weightLossFatigue,
             });
-            router.push('/camera-welcome'); 
+            router.push('/photoguide'); 
           }}
         >
           <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
