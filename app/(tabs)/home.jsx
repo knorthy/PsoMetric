@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
-import { useCallback, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -15,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
+import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function App() {
   const sheetRef = useRef(null);
@@ -26,12 +28,63 @@ export default function App() {
     setisOpen(true);
   }, []);
 
+  const router = useRouter();
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [assessments, setAssessments] = useState([]);
 
-  const handleSelectAssessment = (assessment) => {
-  console.log('Selected assessment:', assessment);
-  setHistoryVisible(false); 
+  useEffect(() => {
+    if (historyVisible) {
+      loadHistory();
+    }
+  }, [historyVisible]);
 
+  const loadHistory = async () => {
+    try {
+      const data = await fetchAssessmentHistory();
+      const list = Array.isArray(data) ? data : [];
+      const formatted = list.map((item, index) => ({
+        id: item.timestamp || String(index),
+        title: item.timestamp ? new Date(item.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : `Assessment ${index + 1}`,
+        ...item
+      }));
+      formatted.sort((a, b) => {
+        if (a.timestamp && b.timestamp) {
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        }
+        return 0;
+      });
+      setAssessments(formatted);
+    } catch (error) {
+      console.error('Failed to load history', error);
+    }
+  };
+
+  const handleSelectAssessment = async (assessment) => {
+    try {
+      setHistoryVisible(false);
+      // If the assessment object already has detailed fields, we might not need to fetch.
+      // But to be safe and ensure we have the full data as stored in DB:
+      if (assessment.timestamp) {
+        const fullResult = await fetchAssessmentResult(assessment.timestamp);
+        router.push({
+          pathname: '/result',
+          params: fullResult
+        });
+      } else {
+        // Fallback if no timestamp
+        router.push({
+          pathname: '/result',
+          params: assessment
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching full assessment details:', error);
+      // Fallback to passing what we have
+      router.push({
+        pathname: '/result',
+        params: assessment
+      });
+    }
   };
 
   return (
@@ -98,7 +151,10 @@ export default function App() {
 
       {/* Bottom button */}
       <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity style={styles.startButton}>
+        <TouchableOpacity 
+          style={styles.startButton}
+          onPress={() => router.push('/assessment')}
+        >
           <Text style={styles.startButtonText}>Start the Assessment</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" style={styles.arrowIcon} />
         </TouchableOpacity>
@@ -108,6 +164,7 @@ export default function App() {
           visible={historyVisible}
           onClose={() => setHistoryVisible(false)}
           onSelectAssessment={handleSelectAssessment}
+          assessments={assessments}
         />
     </SafeAreaView>
 

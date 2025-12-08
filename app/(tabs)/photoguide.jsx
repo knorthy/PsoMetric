@@ -1,19 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AvatarBottomSheet from '../../components/AvatarBottomSheet';
+import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 // Image sets with captions
@@ -36,6 +40,30 @@ export default function CameraWelcome() {
   const insets = useSafeAreaInsets();
   const questionnaireParams = useLocalSearchParams();
   const [uploading] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
+
+  const handleSelectAssessment = (assessment) => {
+    console.log('Selected assessment:', assessment);
+    setHistoryVisible(false); 
+  };
+
+  // Close bottom sheet when navigating away
+  useEffect(() => {
+    return () => {
+      if (sheetRef.current) {
+        sheetRef.current?.dismiss();
+      }
+    };
+  }, []);
 
   const goToCamera = () => {
     router.push({
@@ -53,16 +81,21 @@ export default function CameraWelcome() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="menu" size={28} color="#333" />
-        </TouchableOpacity>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <TouchableOpacity 
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={() => setHistoryVisible(true)}
+            >
+              <Ionicons name="menu" size={28} color="#333" />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.avatarContainer}>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
           <Image
             source={require('../../assets/images/avatar.jpg')}
             style={styles.avatar}
@@ -120,23 +153,59 @@ export default function CameraWelcome() {
       </ScrollView>
 
       {/* FAB Button */}
-      <View style={[styles.fabContainer, { paddingBottom: insets.bottom + hp(3) }]}>
-        <TouchableOpacity
-          style={[styles.fabButton, uploading && styles.buttonDisabled]}
-          onPress={goToCamera}
-          disabled={uploading}
-        >
-          {uploading ? (
-            <ActivityIndicator size={28} color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="camera-outline" size={28} color="#fff" />
-              <Text style={styles.fabText}>Let's Get Started</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+      {!isOpen && (
+        <View style={[styles.fabContainer, { paddingBottom: insets.bottom + hp(3) }]}>
+          <TouchableOpacity
+            style={[styles.fabButton, uploading && styles.buttonDisabled]}
+            onPress={goToCamera}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <ActivityIndicator size={28} color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="camera-outline" size={28} color="#fff" />
+                <Text style={styles.fabText}>Let's Get Started</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <History
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onSelectAssessment={handleSelectAssessment}
+      />
+
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        onDismiss={() => setisOpen(false)}
+        style={{ zIndex: 2000 }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            appearsOnIndex={0}
+            disappearsOnIndex={-1}
+            opacity={0.45}
+            pressBehavior="close"
+          />
+        )}
+      >
+        <BottomSheetView>
+          <AvatarBottomSheet
+            onPick={(option) => {
+              sheetRef.current?.dismiss();
+            }}
+            onClose={() => sheetRef.current?.dismiss()}
+          />
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Animated,
     Dimensions,
@@ -22,23 +21,16 @@ export default function History({
   visible = false,
   onClose,                  
   onSelectAssessment = () => {},
+  assessments = [],
 }) {
   const router = useRouter(); 
   const slideAnim = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [assessments] = useState(PLACEHOLDER_ASSESSMENTS);
-  const [filteredAssessments, setFilteredAssessments] = useState(assessments);
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        if (visible) {
-          onClose();
-        }
-      };
-    }, [visible, onClose])
-  );
+  const [filteredAssessments, setFilteredAssessments] = useState([]);
+  
+  // Memoize assessments to prevent unnecessary re-renders
+  const memoizedAssessments = useMemo(() => assessments, [JSON.stringify(assessments)]);
   
   useEffect(() => {
   if (!visible) {
@@ -57,16 +49,16 @@ export default function History({
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredAssessments(assessments);
+      setFilteredAssessments(memoizedAssessments);
     } else {
       const query = searchQuery.toLowerCase();
       setFilteredAssessments(
-        assessments.filter((item) =>
+        memoizedAssessments.filter((item) =>
           item.title?.toLowerCase().includes(query)
         )
       );
     }
-  }, [searchQuery, assessments]);
+  }, [searchQuery, memoizedAssessments]);
 
   if (!visible && slideAnim._value <= -SIDEBAR_WIDTH + 10) return null;
 

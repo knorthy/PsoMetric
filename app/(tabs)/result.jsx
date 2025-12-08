@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -12,12 +13,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
   const [historyVisible, setHistoryVisible] = useState(false);
+
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
 
   // === All data from previous screens (passed via router.push params) ===
   const {
@@ -64,6 +76,9 @@ export default function ResultScreen() {
     // From assess4.jsx (camera) + photoguide
     images,                  // string or array of URIs
     pasi_score = '0',        // string from backend or calculated
+    
+    // NEW: Backend questionnaire response with GenAI recommendations
+    questionnaireResult,     // JSON string from backend
   } = params;
 
   // === Helper Functions ===
@@ -72,6 +87,8 @@ export default function ResultScreen() {
   const list = (arr) => {
     if (!arr) return 'None';
     if (Array.isArray(arr)) return arr.length > 0 ? arr.join(', ') : 'None';
+    // Handle comma-separated strings if backend returns them that way
+    if (typeof arr === 'string' && arr.includes(',')) return arr.split(',').join(', ');
     return String(arr);
   };
 
@@ -92,21 +109,33 @@ export default function ResultScreen() {
   const displayScore = hasScore ? rawScore.toFixed(1) : '—';
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
 
+  // Parse backend questionnaire response
+  let genAIRecommendations = null;
+  try {
+    if (questionnaireResult) {
+      genAIRecommendations = JSON.parse(questionnaireResult);
+    }
+  } catch (e) {
+    console.error('Failed to parse questionnaire result:', e);
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
-          <Ionicons name="menu" size={30} color="#333" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarContainer}>
-          <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
-        </TouchableOpacity>
-      </View>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
+              <Ionicons name="menu" size={30} color="#333" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
+              <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
+            </TouchableOpacity>
+          </View>
 
-      <Text style={styles.pageTitle}>Psoriasis Assessment Result</Text>
+      <Text style={styles.pageTitle}>Assessment Result</Text>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
@@ -242,7 +271,20 @@ export default function ResultScreen() {
         {/* Recommendations */}
         <Text style={styles.sectionTitle}>Personalized Recommendations</Text>
         <View style={styles.recommendationsCard}>
-          {hasScore ? (
+          {genAIRecommendations && genAIRecommendations.nextSteps ? (
+            <>
+              <Text style={styles.recSectionTitle}>🤖 AI-Generated Next Steps</Text>
+              {genAIRecommendations.nextSteps.map((step, index) => (
+                <Text key={index} style={styles.recItem}>• {step}</Text>
+              ))}
+              {genAIRecommendations.additionalNotes && (
+                <>
+                  <Text style={[styles.recSectionTitle, { marginTop: hp(2) }]}>📝 Additional Notes</Text>
+                  <Text style={styles.recNote}>{genAIRecommendations.additionalNotes}</Text>
+                </>
+              )}
+            </>
+          ) : hasScore ? (
             <>
               <Text style={styles.recItem}>• Continue moisturizing daily with fragrance-free emollients</Text>
               <Text style={styles.recItem}>• Consider topical corticosteroids or vitamin D analogues</Text>
@@ -277,9 +319,37 @@ export default function ResultScreen() {
         </TouchableOpacity>
       </View>
 
-      <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
     </SafeAreaView>
-  );
+
+    <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
+
+    <BottomSheetModal
+      ref={sheetRef}
+      snapPoints={snapPoints}
+      enablePanDownToClose={true}
+      onDismiss={() => setisOpen(false)}
+      backdropComponent={(props) => (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          opacity={0.45}
+          pressBehavior="close"
+        />
+      )}
+    >
+      <BottomSheetView>
+        <AvatarBottomSheet
+          onPick={(option) => {
+            sheetRef.current?.dismiss();
+          }}
+          onClose={() => sheetRef.current?.dismiss()}
+        />
+      </BottomSheetView>
+    </BottomSheetModal>
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -504,11 +574,25 @@ const styles = StyleSheet.create({
     borderColor: '#D6EBFF',
   },
 
+  recSectionTitle: {
+    fontSize: hp(2.4),
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: hp(1.5),
+  },
+
   recItem: { 
     fontSize: hp(2.2), 
     color: '#333', 
     lineHeight: hp(3.4), 
     marginBottom: hp(1) 
+  },
+
+  recNote: {
+    fontSize: hp(2),
+    color: '#555',
+    lineHeight: hp(2.8),
+    fontStyle: 'italic',
   },
 
   alwaysRec: { 

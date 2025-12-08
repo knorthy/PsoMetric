@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -14,19 +15,41 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useAssessment } from '../../components/AssessmentContext';
+import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function Assess2Screen() {
+  const { screen2, updateScreen2 } = useAssessment();
   const router = useRouter();
 
   const [historyVisible, setHistoryVisible] = useState(false);
+
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
 
   const handleSelectAssessment = (assessment) => {
   console.log('Selected assessment:', assessment);
   setHistoryVisible(false); 
 
   };
+
+  // Close bottom sheet when navigating away
+  useEffect(() => {
+    return () => {
+      if (sheetRef.current) {
+        sheetRef.current?.dismiss();
+      }
+    };
+  }, []);
 
   const [onsetDate, setOnsetDate] = useState('');
   const [symptomPattern, setSymptomPattern] = useState('');
@@ -42,6 +65,22 @@ export default function Assess2Screen() {
   const [triggers, setTriggers] = useState([]);
   const [medTriggers, setMedTriggers] = useState([]);
   const [sunlightEffect, setSunlightEffect] = useState('');
+
+  // Load saved data from context on mount
+  useEffect(() => {
+    if (screen2.onsetDate) setOnsetDate(screen2.onsetDate);
+    if (screen2.symptomPattern) setSymptomPattern(screen2.symptomPattern);
+    if (screen2.lesionSpeed) setLesionSpeed(screen2.lesionSpeed);
+    if (screen2.itching !== undefined) setItching(screen2.itching);
+    if (screen2.burning !== undefined) setBurning(screen2.burning);
+    if (screen2.pain !== undefined) setPain(screen2.pain);
+    if (screen2.bleeding !== undefined) setBleeding(screen2.bleeding);
+    if (screen2.worsenAtNight) setWorsenAtNight(screen2.worsenAtNight);
+    if (screen2.worsenWithStress) setWorsenWithStress(screen2.worsenWithStress);
+    if (screen2.triggers.length > 0) setTriggers(screen2.triggers);
+    if (screen2.medTriggers.length > 0) setMedTriggers(screen2.medTriggers);
+    if (screen2.sunlightEffect) setSunlightEffect(screen2.sunlightEffect);
+  }, []);
 
   // Toggle multi-select
   const toggle = (array, setArray, value) => {
@@ -94,18 +133,20 @@ export default function Assess2Screen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        onPress={() => setHistoryVisible(true)}
-        >
-          
-          <Ionicons name="menu" size={28} color="#333" />
-        </TouchableOpacity>
+          <View style={styles.topBar}>
+            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => setHistoryVisible(true)}
+            >
+              
+              <Ionicons name="menu" size={28} color="#333" />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.avatarContainer}>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
           <Image
             source={require('../../assets/images/avatar.jpg')}
             style={styles.avatar}
@@ -341,21 +382,66 @@ export default function Assess2Screen() {
       </ScrollView>
 
       {/* FAB - Bottom Right */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          router.push('/assess3');
-        }}
-      >
-        <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+      {!isOpen && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => {
+            // Save screen 2 data to context before navigating
+            updateScreen2({
+              onsetDate,
+              symptomPattern,
+              lesionSpeed,
+              itching,
+              burning,
+              pain,
+              bleeding,
+              worsenAtNight,
+              worsenWithStress,
+              triggers,
+              medTriggers,
+              sunlightEffect,
+            });
+            router.push('/assess3');
+          }}
+        >
+          <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       <History
         visible={historyVisible}
         onClose={() => setHistoryVisible(false)}
         onSelectAssessment={handleSelectAssessment}
       />
+
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        onDismiss={() => setisOpen(false)}
+        style={{ zIndex: 2000 }}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            appearsOnIndex={0}
+            disappearsOnIndex={-1}
+            opacity={0.45}
+            pressBehavior="close"
+          />
+        )}
+      >
+        <BottomSheetView>
+          <AvatarBottomSheet
+            onPick={(option) => {
+              sheetRef.current?.dismiss();
+            }}
+            onClose={() => sheetRef.current?.dismiss()}
+          />
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
