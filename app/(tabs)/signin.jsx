@@ -5,7 +5,6 @@ import {
   Alert,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -88,10 +87,12 @@ const SignIn = () => {
   };
 
   return (
-    <ScreenWrapper bg="white">
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        {/* Title */}
-        <View style={styles.titleContainer}>
+    <ScreenWrapper bg="transparent">
+      <View style={styles.wrapper}>
+        <GradientBackground />
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          {/* Title */}
+          <View style={styles.titleContainer}>
           <Text style={styles.title}>Sign in your account</Text>
         </View>
 
@@ -101,7 +102,7 @@ const SignIn = () => {
           <TextInput
             style={styles.input}
             placeholder="ex: jan.smith@email.com"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor="white"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -117,7 +118,7 @@ const SignIn = () => {
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter password"
-              placeholderTextColor="#A0A0A0"
+              placeholderTextColor="white"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -132,7 +133,7 @@ const SignIn = () => {
               <MaterialIcons
                 name={showPassword ? 'visibility' : 'visibility-off'}
                 size={24}
-                color="#666"
+                color="white"
               />
             </Pressable>
           </View>
@@ -158,6 +159,7 @@ const SignIn = () => {
         </Text>
       </ScrollView>
       {loading && <Loading />}
+      </View>
     </ScreenWrapper>
   );
 };

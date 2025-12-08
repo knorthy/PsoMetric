@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
+import AvatarBottomSheet from '../../components/AvatarBottomSheet';
+import History from '../../components/history';
 import { getAuthHeaders, getCognitoAuth } from '../../helpers/auth';
 import { hp, wp } from '../../helpers/common';
 
@@ -28,6 +32,21 @@ export default function CameraWelcome() {
 
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
+
+  const handleSelectAssessment = (assessment) => {
+    console.log('Selected assessment:', assessment);
+    setHistoryVisible(false); 
+  };
 
   const pickImageAndUpload = async (useCamera = false) => {
     try {
@@ -188,16 +207,26 @@ export default function CameraWelcome() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
+          <View style={styles.topBar}>
+            <TouchableOpacity 
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={() => setHistoryVisible(true)}
+            >
+              <Ionicons name="menu" size={28} color="#333" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
+          <Image
+            source={require('../../assets/images/avatar.jpg')}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
         </TouchableOpacity>
-        <View style={styles.avatarContainer}>
-          <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
-        </View>
       </View>
 
       <View style={styles.content}>
@@ -243,7 +272,40 @@ export default function CameraWelcome() {
           </View>
         )}
       </View>
+
+      <History
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onSelectAssessment={handleSelectAssessment}
+      />
+
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        onDismiss={() => setisOpen(false)}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop
+            {...props}
+            appearsOnIndex={0}
+            disappearsOnIndex={-1}
+            opacity={0.45}
+            pressBehavior="close"
+          />
+        )}
+      >
+        <BottomSheetView>
+          <AvatarBottomSheet
+            onPick={(option) => {
+              sheetRef.current?.dismiss();
+            }}
+            onClose={() => sheetRef.current?.dismiss()}
+          />
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -256,6 +318,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(6),
     paddingTop: Platform.select({ ios: hp(1.5), android: hp(4) }),
     paddingBottom: hp(2.5),
+    marginTop: Platform.select({ ios: 0, android: hp(1) }),
   },
   avatarContainer: {
     width: wp(9),

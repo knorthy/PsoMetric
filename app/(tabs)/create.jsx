@@ -138,7 +138,7 @@ const SignUpScreen = () => {
                 <MaterialIcons
                   name={showPassword ? 'visibility' : 'visibility-off'}
                   size={22}
-                  color="#ccc"
+                  color="white"
                 />
               </Pressable>
             </View>
@@ -169,7 +169,7 @@ const SignUpScreen = () => {
                 <MaterialIcons
                   name={showConfirmPassword ? 'visibility' : 'visibility-off'}
                   size={22}
-                  color="#ccc"
+                  color="white"
                 />
               </Pressable>
             </View>

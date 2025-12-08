@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -13,7 +14,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
+import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
@@ -28,11 +31,29 @@ export default function SymptomAssessmentScreen() {
 
   const [historyVisible, setHistoryVisible] = useState(false);
 
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
+
   const handleSelectAssessment = (assessment) => {
   console.log('Selected assessment:', assessment);
   setHistoryVisible(false); 
 
   };
+
+  // Close bottom sheet when navigating away
+  useEffect(() => {
+    return () => {
+      if (sheetRef.current) {
+        sheetRef.current?.dismiss();
+      }
+    };
+  }, []);
 
   const [location, setLocation] = useState([]);
   const [appearance, setAppearance] = useState([]);
@@ -90,16 +111,18 @@ export default function SymptomAssessmentScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        onPress={() => setHistoryVisible(true)}>
-          <Ionicons name="menu" size={28} color="#333" />
-        </TouchableOpacity>
+          <View style={styles.topBar}>
+            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => setHistoryVisible(true)}>
+              <Ionicons name="menu" size={28} color="#333" />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.avatarContainer}>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
           <Image
             source={require('../../assets/images/avatar.jpg')}
             style={styles.avatar}
@@ -317,25 +340,27 @@ export default function SymptomAssessmentScreen() {
       </ScrollView>
 
       {/* FAB  */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          // Save screen 1 data to context before navigating
-          updateScreen1({
-            gender,
-            age,
-            psoriasisHistory,
-            location,
-            appearance,
-            size,
-            nails,
-            scalp,
-          });
-          router.push('/assess2');
-        }}
-      >
-        <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+      {!isOpen && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => {
+            // Save screen 1 data to context before navigating
+            updateScreen1({
+              gender,
+              age,
+              psoriasisHistory,
+              location,
+              appearance,
+              size,
+              nails,
+              scalp,
+            });
+            router.push('/assess2');
+          }}
+        >
+          <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
         <History
               visible={historyVisible}
@@ -343,7 +368,34 @@ export default function SymptomAssessmentScreen() {
               onSelectAssessment={handleSelectAssessment}
             />
 
-    </SafeAreaView>
+        <BottomSheetModal
+          ref={sheetRef}
+          snapPoints={snapPoints}
+          enablePanDownToClose={true}
+          onDismiss={() => setisOpen(false)}
+          style={{ zIndex: 2000 }}
+          backdropComponent={(props) => (
+            <BottomSheetBackdrop
+              {...props}
+              appearsOnIndex={0}
+              disappearsOnIndex={-1}
+              opacity={0.45}
+              pressBehavior="close"
+            />
+          )}
+        >
+          <BottomSheetView>
+            <AvatarBottomSheet
+              onPick={(option) => {
+                sheetRef.current?.dismiss();
+              }}
+              onClose={() => sheetRef.current?.dismiss()}
+            />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </SafeAreaView>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 

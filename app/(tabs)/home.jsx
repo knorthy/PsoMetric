@@ -3,14 +3,14 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, Bottom
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
@@ -151,7 +151,10 @@ export default function App() {
 
       {/* Bottom button */}
       <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity style={styles.startButton}>
+        <TouchableOpacity 
+          style={styles.startButton}
+          onPress={() => router.push('/assessment')}
+        >
           <Text style={styles.startButtonText}>Start the Assessment</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" style={styles.arrowIcon} />
         </TouchableOpacity>

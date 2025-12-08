@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
@@ -121,7 +121,7 @@ export default function ResultScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.pageTitle}>Psoriasis Assessment Result</Text>
+      <Text style={styles.pageTitle}>Assessment Result</Text>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
