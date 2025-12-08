@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,22 +14,38 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAssessment } from '../../components/AssessmentContext';
+import { getAuthHeaders, getCognitoAuth } from '../../helpers/auth';
 import { hp, wp } from '../../helpers/common';
 
 // ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-const BACKEND_UPLOAD_URL = 'http://192.168.31.117:8000/analyze/'; 
+const BACKEND_UPLOAD_URL = 'http://192.168.31.117:8000/analyze/';
+const QUESTIONNAIRE_SUBMIT_URL = 'http://192.168.31.117:8000/questionnaire/submit';
 
 export default function CameraWelcome() {
+  const { getFullQuestionnaire, resetAssessment } = useAssessment();
   const router = useRouter();
-  
-  // Get the questionnaire answers passed from previous screens
-  const questionnaireParams = useLocalSearchParams(); 
 
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const pickImageAndUpload = async (useCamera = false) => {
     try {
+      // Get auth token before proceeding
+      const authHeaders = await getAuthHeaders();
+      const cognitoAuth = await getCognitoAuth();
+      
+      if (!cognitoAuth) {
+        Alert.alert(
+          'Authentication Required',
+          'Please sign in to submit assessments.',
+          [{ text: 'OK', onPress: () => router.push('/signin') }]
+        );
+        return;
+      }
+
+      console.log('🔐 Authenticated as:', cognitoAuth.username);
+
       // 1. Permission & Launch
       let result;
       if (useCamera) {
@@ -75,12 +91,13 @@ export default function CameraWelcome() {
 
       console.log("🚀 Uploading to:", BACKEND_UPLOAD_URL);
 
-      // 3. Send to Backend
+      // 3. Send to Backend with JWT token
       const response = await fetch(BACKEND_UPLOAD_URL, {
         method: 'POST',
         body: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
+          ...authHeaders, // Add JWT token
         },
       });
 
@@ -93,13 +110,72 @@ export default function CameraWelcome() {
 
       const data = JSON.parse(responseText);
 
-      // 4. Navigate to Result Screen with Data
+      // 4. Submit Questionnaire Data to Backend
+      console.log("📋 Submitting questionnaire data...");
+      
+      const questionnaireData = getFullQuestionnaire();
+      
+      // Add user info to questionnaire
+      const enrichedQuestionnaireData = {
+        ...questionnaireData,
+        userId: cognitoAuth.userId,
+        username: cognitoAuth.username,
+      };
+      
+      // 🧪 TEST: Log what we're sending
+      console.log("=" + "=".repeat(50));
+      console.log("📤 SENDING TO BACKEND:");
+      console.log("🆔 User ID:", cognitoAuth.userId);
+      console.log("👤 Username:", cognitoAuth.username);
+      console.log("📋 Full payload:", JSON.stringify(enrichedQuestionnaireData, null, 2));
+      console.log("=" + "=".repeat(50));
+      
+      let questionnaireResponse = null;
+      
+      try {
+        const questionnaireResult = await fetch(QUESTIONNAIRE_SUBMIT_URL, {
+          method: 'POST',
+          body: JSON.stringify(enrichedQuestionnaireData),
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders, // Add JWT token
+          },
+        });
+
+        if (questionnaireResult.ok) {
+          const questionnaireText = await questionnaireResult.text();
+          questionnaireResponse = JSON.parse(questionnaireText);
+          console.log("=" + "=".repeat(50));
+          console.log("📥 BACKEND RESPONSE:");
+          console.log(JSON.stringify(questionnaireResponse, null, 2));
+          console.log("=" + "=".repeat(50));
+          console.log("✅ Questionnaire submitted successfully");
+          
+          // Clear assessment data after successful submission
+          await resetAssessment();
+        } else {
+          const errorText = await questionnaireResult.text();
+          console.error("❌ Questionnaire submission failed:", questionnaireResult.status, errorText);
+          console.warn("⚠️ Questionnaire submission failed, continuing with image results only");
+        }
+      } catch (questionnaireError) {
+        console.error('Questionnaire submission error:', questionnaireError);
+        // Continue even if questionnaire fails - user still gets image analysis
+      }
+
+      // 5. Navigate to Result Screen with Both Data Sources
       router.push({
-        pathname: '/(tabs)/result', // Make sure this matches your folder path!
+        pathname: '/(tabs)/result',
         params: {
-          ...questionnaireParams, // Pass previous answers
-          analysisResult: JSON.stringify(data), // Pass AI result
-          images: [uri] // Pass the local image for display
+          // Image analysis
+          analysisResult: JSON.stringify(data),
+          images: [uri],
+          // Questionnaire data (for display)
+          ...questionnaireData.screen1,
+          ...questionnaireData.screen2,
+          ...questionnaireData.screen3,
+          // Backend questionnaire response (GenAI recommendations)
+          questionnaireResult: questionnaireResponse ? JSON.stringify(questionnaireResponse) : null,
         }
       });
 

@@ -29,6 +29,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    npx expo install @shopify/react-native-skia
 
+   npm install amazon-cognito-identity-js
    ```
 
 2. Start the app

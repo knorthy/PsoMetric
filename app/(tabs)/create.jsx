@@ -1,18 +1,18 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { signInWithRedirect, signUp } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import GradientBackground from '../../components/invertedGB';
 import { hp, wp } from '../../helpers/common';
+import { signUp } from '../../services/cognito';
 
 const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
 const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
@@ -72,11 +72,7 @@ const SignUpScreen = () => {
     }
 
     try {
-      await signUp({
-        username: email,
-        password,
-        options: { userAttributes: { email, name } },
-      });
+      await signUp(email, password, name);
       alert('Sign up successful! Please check your email.');
       router.push({ pathname: '/verify', params: { email } });
     } catch (error) {

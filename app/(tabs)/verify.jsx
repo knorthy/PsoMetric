@@ -1,18 +1,18 @@
-import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
+import { confirmSignUp, resendSignUpCode } from '../../services/cognito';
 
 const VerifyScreen = () => {
   const router = useRouter();
@@ -33,10 +33,7 @@ const VerifyScreen = () => {
 
     setLoading(true);
     try {
-      const { isSignUpComplete } = await confirmSignUp({
-        username: email,
-        confirmationCode: code.trim()
-      });
+      const { isSignUpComplete } = await confirmSignUp(email, code.trim());
 
       if (isSignUpComplete) {
         router.replace('/(tabs)/home'); 
@@ -55,7 +52,7 @@ const VerifyScreen = () => {
   // HANDLER: Resend verification code
   const handleResendCode = async () => {
     try {
-      await resendSignUpCode({ username: email });
+      await resendSignUpCode(email);
       Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
     } catch (error) {
       console.log('Resend Error:', error);
