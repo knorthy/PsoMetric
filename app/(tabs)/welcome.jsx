@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
+  Easing,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -19,10 +20,10 @@ const ITEM_WIDTH = wp(80);
 const ITEM_SPACING = wp(10);
 
 const data = [
-  { image: require('../../assets/images/welcome/image_1.png') },
-  { image: require('../../assets/images/welcome/image_2.png') },
-  { image: require('../../assets/images/welcome/image_3.png') },
-  { image: require('../../assets/images/welcome/image_4.png') },
+  { image: require('../../assets/images/welcome/img3.png') },
+  { image: require('../../assets/images/welcome/img2.png') },
+  { image: require('../../assets/images/welcome/img1.png') },
+  { image: require('../../assets/images/welcome/img4.png') },
 ];
 
 export default function Welcome() {
@@ -131,7 +132,7 @@ function AnimatedItem({ item, index, scrollX }) {
       index * ITEM_WIDTH,
       (index + 1) * ITEM_WIDTH,
     ];
-    const scale = interpolate(scrollX.value, inputRange, [0.8, 1, 0.8], 'clamp');
+    const scale = interpolate(scrollX.value, inputRange, [0.8, 1, 0.8], 'clamp', Easing.inOut(Easing.ease));
     return {
       transform: [{ scale }],
     };
@@ -166,7 +167,8 @@ function Dot({ index, scrollX }) {
       scrollX.value,
       [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
       [8, 16, 8],
-      'clamp'
+      'clamp',
+      Easing.inOut(Easing.ease)
     );
     return {
       width,
