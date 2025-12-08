@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Animated,
     Dimensions,
@@ -29,16 +28,6 @@ export default function History({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredAssessments, setFilteredAssessments] = useState(assessments);
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        if (visible) {
-          onClose();
-        }
-      };
-    }, [visible, onClose])
-  );
   
   useEffect(() => {
   if (!visible) {

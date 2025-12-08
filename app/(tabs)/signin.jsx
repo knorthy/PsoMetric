@@ -5,6 +5,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +14,12 @@ import {
 import { useAuth } from '../../components/AuthContext';
 import Loading from '../../components/Loading';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import GradientBackground from '../../components/invertedGB';
 import { hp, wp } from '../../helpers/common';
 import { signIn } from '../../services/cognito';
+
+const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
+const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
 
 const SignIn = () => {
   const router = useRouter();
@@ -24,6 +29,7 @@ const SignIn = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const handleSignIn = async () => {
     // 1. Basic Validation
@@ -157,6 +163,7 @@ const SignIn = () => {
 };
 
 const styles = StyleSheet.create({
+  wrapper: { flex: 1, position: 'relative' },
   container: {
     alignItems: 'center',
     paddingBottom: hp(5),
@@ -170,7 +177,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: wp(6.5),
     fontWeight: 'bold',
-    color: '#000',
+    color: '#ffffff',
   },
   inputContainer: {
     width: wp(80),
@@ -178,12 +185,12 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: wp(4),
-    color: '#000',
+    color: '#ffffff',
     marginBottom: hp(0.5),
   },
   input: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     paddingHorizontal: wp(4),
     fontSize: wp(4),
@@ -191,11 +198,13 @@ const styles = StyleSheet.create({
   },
   passwordInputWrapper: {
     height: hp(6),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: wp(4),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   passwordInput: {
     flex: 1,
@@ -209,7 +218,7 @@ const styles = StyleSheet.create({
   button: {
     height: hp(6),
     width: wp(80),
-    backgroundColor: '#0085FF',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -219,7 +228,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   textButton: {
-    color: '#fff',
+    color: '#50a2ffff',
     fontSize: wp(4.5),
     fontWeight: '600',
   },
