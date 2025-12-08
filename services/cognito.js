@@ -1,13 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     AuthenticationDetails,
-    CognitoAccessToken,
-    CognitoIdToken,
-    CognitoRefreshToken,
     CognitoUser,
     CognitoUserAttribute,
-    CognitoUserPool,
-    CognitoUserSession
+    CognitoUserPool
 } from 'amazon-cognito-identity-js';
 import 'react-native-get-random-values';
 import amplifyconfig from '../amplifyconfiguration.json';
@@ -279,61 +275,4 @@ export const getAuthHeaders = async () => {
   } catch (error) {
     return {};
   }
-};
-
-/**
- * Save session from external tokens (e.g. Hosted UI)
- * @param {object} tokenResult - { accessToken, idToken, refreshToken }
- * @returns {Promise<object>} - User object
- */
-export const saveSessionFromExternalTokens = async (tokenResult) => {
-  const { accessToken, idToken, refreshToken } = tokenResult;
-  
-  if (!accessToken || !idToken) {
-    throw new Error('Missing tokens');
-  }
-
-  // Parse tokens
-  const idTokenObj = new CognitoIdToken({ IdToken: idToken });
-  const accessTokenObj = new CognitoAccessToken({ AccessToken: accessToken });
-  const refreshTokenObj = new CognitoRefreshToken({ RefreshToken: refreshToken });
-  
-  const username = idTokenObj.payload.email; // Use email as username
-  const userId = idTokenObj.payload.sub;
-  const name = idTokenObj.payload.name;
-  const clientId = poolData.ClientId;
-
-  // Construct keys
-  const keyPrefix = `CognitoIdentityServiceProvider.${clientId}.${username}`;
-  const lastUserKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-
-  // Save to storage
-  storage.setItem(lastUserKey, username);
-  storage.setItem(`${keyPrefix}.idToken`, idToken);
-  storage.setItem(`${keyPrefix}.accessToken`, accessToken);
-  if (refreshToken) {
-    storage.setItem(`${keyPrefix}.refreshToken`, refreshToken);
-  }
-  
-  // Also construct a session object to verify validity
-  const session = new CognitoUserSession({
-    IdToken: idTokenObj,
-    AccessToken: accessTokenObj,
-    RefreshToken: refreshTokenObj
-  });
-
-  if (!session.isValid()) {
-    throw new Error('Invalid session tokens');
-  }
-
-  console.log('✅ External session saved for:', username);
-
-  return {
-    username,
-    userId,
-    name,
-    accessToken,
-    idToken,
-    refreshToken
-  };
 };

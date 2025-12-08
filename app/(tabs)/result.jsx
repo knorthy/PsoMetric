@@ -75,6 +75,8 @@ export default function ResultScreen() {
   const list = (arr) => {
     if (!arr) return 'None';
     if (Array.isArray(arr)) return arr.length > 0 ? arr.join(', ') : 'None';
+    // Handle comma-separated strings if backend returns them that way
+    if (typeof arr === 'string' && arr.includes(',')) return arr.split(',').join(', ');
     return String(arr);
   };
 

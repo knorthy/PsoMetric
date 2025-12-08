@@ -22,12 +22,12 @@ export default function History({
   visible = false,
   onClose,                  
   onSelectAssessment = () => {},
+  assessments = [],
 }) {
   const router = useRouter(); 
   const slideAnim = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [assessments] = useState(PLACEHOLDER_ASSESSMENTS);
   const [filteredAssessments, setFilteredAssessments] = useState(assessments);
 
   useFocusEffect(
