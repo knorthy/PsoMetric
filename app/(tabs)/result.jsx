@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -12,12 +13,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
   const [historyVisible, setHistoryVisible] = useState(false);
+
+  const sheetRef = useRef(null);
+  const [isOpen, setisOpen] = useState(false);
+  const snapPoints = ["25%"];
+
+  const handleAvatarPress = useCallback(() => {
+    sheetRef.current?.present();
+    setisOpen(true);
+  }, []);
 
   // === All data from previous screens (passed via router.push params) ===
   const {
@@ -108,18 +120,20 @@ export default function ResultScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
-          <Ionicons name="menu" size={30} color="#333" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarContainer}>
-          <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
-        </TouchableOpacity>
-      </View>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
+              <Ionicons name="menu" size={30} color="#333" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
+              <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
+            </TouchableOpacity>
+          </View>
 
       <Text style={styles.pageTitle}>Assessment Result</Text>
 
@@ -305,9 +319,37 @@ export default function ResultScreen() {
         </TouchableOpacity>
       </View>
 
-      <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
     </SafeAreaView>
-  );
+
+    <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
+
+    <BottomSheetModal
+      ref={sheetRef}
+      snapPoints={snapPoints}
+      enablePanDownToClose={true}
+      onDismiss={() => setisOpen(false)}
+      backdropComponent={(props) => (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          opacity={0.45}
+          pressBehavior="close"
+        />
+      )}
+    >
+      <BottomSheetView>
+        <AvatarBottomSheet
+          onPick={(option) => {
+            sheetRef.current?.dismiss();
+          }}
+          onClose={() => sheetRef.current?.dismiss()}
+        />
+      </BottomSheetView>
+    </BottomSheetModal>
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>
+);
 }
 
 const styles = StyleSheet.create({
