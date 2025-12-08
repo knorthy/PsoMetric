@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Animated,
     Dimensions,
@@ -27,7 +27,10 @@ export default function History({
   const slideAnim = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredAssessments, setFilteredAssessments] = useState(assessments);
+  const [filteredAssessments, setFilteredAssessments] = useState([]);
+  
+  // Memoize assessments to prevent unnecessary re-renders
+  const memoizedAssessments = useMemo(() => assessments, [JSON.stringify(assessments)]);
   
   useEffect(() => {
   if (!visible) {
@@ -46,16 +49,16 @@ export default function History({
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredAssessments(assessments);
+      setFilteredAssessments(memoizedAssessments);
     } else {
       const query = searchQuery.toLowerCase();
       setFilteredAssessments(
-        assessments.filter((item) =>
+        memoizedAssessments.filter((item) =>
           item.title?.toLowerCase().includes(query)
         )
       );
     }
-  }, [searchQuery, assessments]);
+  }, [searchQuery, memoizedAssessments]);
 
   if (!visible && slideAnim._value <= -SIDEBAR_WIDTH + 10) return null;
 
