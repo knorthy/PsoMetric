@@ -97,6 +97,14 @@ export default function ResultScreen() {
   const displayScore = hasScore ? rawScore.toFixed(1) : '—';
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
 
+  const severityDescription = hasScore
+    ? rawScore < 10
+      ? 'Your symptoms indicate mild psoriasis. This is often managed with topical treatments and lifestyle adjustments.'
+      : rawScore < 20
+      ? 'Your symptoms indicate moderate psoriasis. You might benefit from a consultation for stronger treatments or phototherapy.'
+      : 'Your symptoms indicate severe psoriasis. It is highly recommended to see a specialist for systemic treatment options.'
+    : '';
+
   // Parse backend questionnaire response
   let genAIRecommendations = null;
   try {

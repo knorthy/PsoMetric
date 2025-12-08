@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Button, StyleSheet, Text, View } from 'react-native';
 
 
-const BACKEND_UPLOAD_URL = 'http://192.168.68.119:8000/camera';
+const BACKEND_UPLOAD_URL = 'http://192.168.68.109:8000/camera';
 
 export default function CameraTab() {
   const [hasPermission, setHasPermission] = useState(null);

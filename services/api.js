@@ -1,6 +1,6 @@
 import { getAuthHeaders, getCurrentUser } from './cognito';
 
-const BASE_URL = 'http://192.168.68.119:8000';
+const BASE_URL = 'http://192.168.68.109:8000';
 
 export const fetchAssessmentHistory = async () => {
   try {
