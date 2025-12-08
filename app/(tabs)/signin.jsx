@@ -1,88 +1,81 @@
-// File: app/signin.jsx (or wherever your sign-in screen is)
-
-import { signIn, signInWithRedirect } from '@aws-amplify/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from 'react-native';
+import { useAuth } from '../../components/AuthContext';
+import Loading from '../../components/Loading';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
+import { signIn } from '../../services/cognito';
 
 const SignIn = () => {
   const router = useRouter();
+  const { setAuth } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Validation helpers
-  const isValidEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const isValidPassword = password =>
-    /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password);
-
-  const validateEmail = value => {
-    setEmail(value);
-    if (!value) {
-      setEmailError('Email is required.');
-    } else if (!isValidEmail(value)) {
-      setEmailError('Please enter a valid email address.');
-    } else {
-      setEmailError('');
-    }
-  };
-
-  const validatePassword = value => {
-    setPassword(value);
-    if (!value) {
-      setPasswordError('Password is required.');
-    } else if (value.length < 8) {
-      setPasswordError('Password must be at least 8 characters.');
-    } else if (!isValidPassword(value)) {
-      setPasswordError('Must contain 1 uppercase, 1 number & 1 special character.');
-    } else {
-      setPasswordError('');
-    }
-  };
-
   const handleSignIn = async () => {
-    // Final check before hitting Amplify
+    // 1. Basic Validation
     if (!email || !password) {
-      Alert.alert('Missing fields', 'Please fill in email and password.');
-      return;
-    }
-    if (emailError || passwordError) {
-      Alert.alert('Fix errors', 'Please correct the errors above.');
+      Alert.alert('Missing fields', 'Please enter both email and password.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await signIn({ username: email.trim().toLowerCase(), password });
+      console.log('🔐 Signing in:', email);
+      
+      // 2. Call Cognito Service
+      const response = await signIn(email.trim().toLowerCase(), password);
 
       if (response.isSignedIn) {
+        console.log('✅ Sign in successful');
+        // 3. Update Global State directly (Optimized)
+        setAuth(response); 
+        // 4. Navigate to Home
         router.replace('/(tabs)/home');
       }
     } catch (err) {
-      console.error(err);
-      const message =
-        err.message ||
-        err.name === 'UserNotConfirmedException'
-          ? 'Please confirm your email first.'
-          : 'Sign in failed. Check your credentials.';
-      Alert.alert('Sign In Failed', message);
+      console.error('❌ Sign In Error:', err);
+      
+      // Handle specific error codes
+      switch (err.code) {
+        case 'UserNotConfirmedException':
+          Alert.alert(
+            'Email Not Verified',
+            'Your email is not verified yet.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Verify Now',
+                onPress: () => router.push({
+                  pathname: '/(tabs)/verify',
+                  params: { email: email.trim().toLowerCase() }
+                })
+              }
+            ]
+          );
+          break;
+        case 'NotAuthorizedException':
+          Alert.alert('Login Failed', 'Incorrect email or password.');
+          break;
+        case 'UserNotFoundException':
+          Alert.alert('Login Failed', 'User does not exist.');
+          break;
+        default:
+          Alert.alert('Login Failed', err.message || 'An unknown error occurred.');
+      }
     } finally {
       setLoading(false);
     }
@@ -90,49 +83,46 @@ const SignIn = () => {
 
   return (
     <ScreenWrapper bg="white">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Sign in your account</Text>
         </View>
 
-        {/* Email */}
+        {/* Email Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Email</Text>
           <TextInput
-            style={[
-              styles.input,
-              emailError ? styles.inputError : email && styles.inputValid,
-            ]}
+            style={styles.input}
             placeholder="ex: jan.smith@email.com"
+            placeholderTextColor="#A0A0A0"
             value={email}
-            onChangeText={validateEmail}
+            onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         </View>
 
-        {/* Password */}
+        {/* Password Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.labelText}>Password</Text>
-          <View
-            style={[
-              styles.passwordInputWrapper,
-              passwordError ? styles.inputError : password && styles.inputValid,
-            ]}
-          >
+          <View style={styles.passwordInputWrapper}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter password"
+              placeholderTextColor="#A0A0A0"
               value={password}
-              onChangeText={validatePassword}
+              onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+            <Pressable 
+              onPress={() => setShowPassword(!showPassword)} 
+              style={styles.eyeButton}
+              hitSlop={10}
+            >
               <MaterialIcons
                 name={showPassword ? 'visibility' : 'visibility-off'}
                 size={24}
@@ -140,10 +130,9 @@ const SignIn = () => {
               />
             </Pressable>
           </View>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
         </View>
 
-        {/* SIGN IN BUTTON */}
+        {/* Sign In Button */}
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleSignIn}
@@ -154,38 +143,6 @@ const SignIn = () => {
           </Text>
         </Pressable>
 
-        {/* Social Login */}
-        <Text style={styles.text}>Or sign in with</Text>
-        <View style={styles.iconview}>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Google' })}
-          >
-            <Image
-              source={require('../../assets/images/googlelogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Facebook' })}
-          >
-            <Image
-              source={require('../../assets/images/fblogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.socialButton}
-            onPress={() => signInWithRedirect({ provider: 'Twitter' })}
-          >
-            <Image
-              source={require('../../assets/images/twitterlogo.png')}
-              style={styles.socialIcon}
-            />
-          </Pressable>
-        </View>
-
         {/* Sign Up Link */}
         <Text style={styles.signupText}>
           Don’t have an account?{' '}
@@ -194,6 +151,7 @@ const SignIn = () => {
           </Text>
         </Text>
       </ScrollView>
+      {loading && <Loading />}
     </ScreenWrapper>
   );
 };
@@ -229,6 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: wp(4),
     fontSize: wp(4),
+    color: '#000',
   },
   passwordInputWrapper: {
     height: hp(6),
@@ -241,16 +200,11 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
     fontSize: wp(4),
+    color: '#000',
+    height: '100%',
   },
   eyeButton: {
     padding: wp(2),
-  },
-  inputError: { borderColor: 'red', borderWidth: 1 },
-  inputValid: { borderColor: 'green', borderWidth: 1 },
-  errorText: {
-    color: 'red',
-    fontSize: wp(3.5),
-    marginTop: hp(0.5),
   },
   button: {
     height: hp(6),
@@ -269,37 +223,10 @@ const styles = StyleSheet.create({
     fontSize: wp(4.5),
     fontWeight: '600',
   },
-  text: {
-    fontSize: wp(4),
-    color: '#333',
-    marginVertical: hp(2),
-  },
-  iconview: {
-    flexDirection: 'row',
-    gap: wp(6),
-    marginBottom: hp(4),
-  },
-  socialButton: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  socialIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: 'contain',
-  },
   signupText: {
     fontSize: wp(4),
     color: '#555',
+    marginTop: hp(2),
   },
   signup: {
     color: '#0085FF',

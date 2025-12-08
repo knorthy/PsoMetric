@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image,
   Platform,
@@ -13,10 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAssessment } from '../../components/AssessmentContext';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 
 export default function SymptomAssessmentScreen() {
+  const { screen1, updateScreen1 } = useAssessment();
  
   const [gender, setGender] = useState('');
   const [psoriasisHistory, setPsoriasisHistory] = useState('');
@@ -37,6 +39,18 @@ export default function SymptomAssessmentScreen() {
   const [size, setSize] = useState([]);
   const [nails, setNails] = useState([]);
   const [scalp, setScalp] = useState([]);
+
+  // Load saved data from context on mount
+  useEffect(() => {
+    if (screen1.gender) setGender(screen1.gender);
+    if (screen1.age) setAge(screen1.age);
+    if (screen1.psoriasisHistory) setPsoriasisHistory(screen1.psoriasisHistory);
+    if (screen1.location.length > 0) setLocation(screen1.location);
+    if (screen1.appearance.length > 0) setAppearance(screen1.appearance);
+    if (screen1.size.length > 0) setSize(screen1.size);
+    if (screen1.nails.length > 0) setNails(screen1.nails);
+    if (screen1.scalp.length > 0) setScalp(screen1.scalp);
+  }, []);
 
   const toggleOption = (array, setArray, value) => {
     if (array.includes(value)) {
@@ -306,6 +320,17 @@ export default function SymptomAssessmentScreen() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
+          // Save screen 1 data to context before navigating
+          updateScreen1({
+            gender,
+            age,
+            psoriasisHistory,
+            location,
+            appearance,
+            size,
+            nails,
+            scalp,
+          });
           router.push('/assess2');
         }}
       >

@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-  Image,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
@@ -64,6 +64,9 @@ export default function ResultScreen() {
     // From assess4.jsx (camera) + photoguide
     images,                  // string or array of URIs
     pasi_score = '0',        // string from backend or calculated
+    
+    // NEW: Backend questionnaire response with GenAI recommendations
+    questionnaireResult,     // JSON string from backend
   } = params;
 
   // === Helper Functions ===
@@ -91,6 +94,16 @@ export default function ResultScreen() {
 
   const displayScore = hasScore ? rawScore.toFixed(1) : '—';
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
+
+  // Parse backend questionnaire response
+  let genAIRecommendations = null;
+  try {
+    if (questionnaireResult) {
+      genAIRecommendations = JSON.parse(questionnaireResult);
+    }
+  } catch (e) {
+    console.error('Failed to parse questionnaire result:', e);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,7 +255,20 @@ export default function ResultScreen() {
         {/* Recommendations */}
         <Text style={styles.sectionTitle}>Personalized Recommendations</Text>
         <View style={styles.recommendationsCard}>
-          {hasScore ? (
+          {genAIRecommendations && genAIRecommendations.nextSteps ? (
+            <>
+              <Text style={styles.recSectionTitle}>🤖 AI-Generated Next Steps</Text>
+              {genAIRecommendations.nextSteps.map((step, index) => (
+                <Text key={index} style={styles.recItem}>• {step}</Text>
+              ))}
+              {genAIRecommendations.additionalNotes && (
+                <>
+                  <Text style={[styles.recSectionTitle, { marginTop: hp(2) }]}>📝 Additional Notes</Text>
+                  <Text style={styles.recNote}>{genAIRecommendations.additionalNotes}</Text>
+                </>
+              )}
+            </>
+          ) : hasScore ? (
             <>
               <Text style={styles.recItem}>• Continue moisturizing daily with fragrance-free emollients</Text>
               <Text style={styles.recItem}>• Consider topical corticosteroids or vitamin D analogues</Text>
@@ -504,11 +530,25 @@ const styles = StyleSheet.create({
     borderColor: '#D6EBFF',
   },
 
+  recSectionTitle: {
+    fontSize: hp(2.4),
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: hp(1.5),
+  },
+
   recItem: { 
     fontSize: hp(2.2), 
     color: '#333', 
     lineHeight: hp(3.4), 
     marginBottom: hp(1) 
+  },
+
+  recNote: {
+    fontSize: hp(2),
+    color: '#555',
+    lineHeight: hp(2.8),
+    fontStyle: 'italic',
   },
 
   alwaysRec: { 
