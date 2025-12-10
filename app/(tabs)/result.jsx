@@ -139,8 +139,10 @@ export default function ResultScreen() {
   // Determine Scores from ML or Fallback to PASI
   // Backend returns: { global_score, details: { erythema, induration, scaling }, annotated_image_base64 }
   const mlScore = mlAnalysis?.global_score || mlAnalysis?.score || mlAnalysis?.severity_score || parseFloat(pasi_score) || 0;
-  const hasScore = mlScore > 0;
-  const displayScore = hasScore ? mlScore.toFixed(1) : '—';
+  // Check if we have a valid analysis result (even if score is 0, e.g. "Clear")
+  const hasResult = !!mlAnalysis || parseFloat(pasi_score) > 0;
+  const hasScore = hasResult;
+  const displayScore = hasResult ? mlScore.toFixed(1) : '—';
   
   // Handle 'details' potentially being a JSON string or object
   let detailsObj = mlAnalysis?.details || mlAnalysis?.subscores || mlAnalysis?.symptoms || {};
@@ -197,12 +199,27 @@ export default function ResultScreen() {
   const isTenScale = mlScore <= 10; 
   const maxScore = isTenScale ? 10 : 72;
 
-  const severity = hasScore
-    ? (isTenScale 
-        ? (mlScore < 3 ? { text: 'Mild', color: '#34C759' } : mlScore < 7 ? { text: 'Moderate', color: '#FF9F0A' } : { text: 'Severe', color: '#FF3B30' })
-        : (mlScore < 10 ? { text: 'Mild', color: '#34C759' } : mlScore < 20 ? { text: 'Moderate', color: '#FF9F0A' } : { text: 'Severe', color: '#FF3B30' })
-      )
-    : { text: 'Pending', color: '#999999' };
+  let severity = { text: 'Pending', color: '#999999' };
+
+  if (mlAnalysis?.diagnosis) {
+      const d = mlAnalysis.diagnosis.toLowerCase();
+      if (d === 'clear') severity = { text: 'Clear', color: '#34C759' };
+      else if (d === 'mild') severity = { text: 'Mild', color: '#34C759' };
+      else if (d === 'moderate') severity = { text: 'Moderate', color: '#FF9F0A' };
+      else if (d === 'severe') severity = { text: 'Severe', color: '#FF3B30' };
+      else severity = { text: mlAnalysis.diagnosis, color: '#007AFF' };
+  } else if (hasResult) {
+      if (isTenScale) {
+          if (mlScore < 1) severity = { text: 'Clear', color: '#34C759' };
+          else if (mlScore < 3) severity = { text: 'Mild', color: '#34C759' };
+          else if (mlScore < 7) severity = { text: 'Moderate', color: '#FF9F0A' };
+          else severity = { text: 'Severe', color: '#FF3B30' };
+      } else {
+          if (mlScore < 10) severity = { text: 'Mild', color: '#34C759' };
+          else if (mlScore < 20) severity = { text: 'Moderate', color: '#FF9F0A' };
+          else severity = { text: 'Severe', color: '#FF3B30' };
+      }
+  }
 
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
   // Use annotated image from ML if available, otherwise first uploaded image
@@ -239,13 +256,15 @@ export default function ResultScreen() {
           
           <View style={[styles.severityPill, { backgroundColor: severity.color + '20' }]}>
             <Text style={[styles.severityPillText, { color: severity.color }]}>
-              {hasScore ? `${severity.text} Psoriasis` : 'Assessment Incomplete'}
+              {hasScore ? (severity.text === 'Clear' ? 'No Psoriasis Detected' : `${severity.text} Psoriasis`) : 'Assessment Incomplete'}
             </Text>
           </View>
           
           <Text style={styles.summaryDescription}>
             {hasScore 
-              ? `AI analysis indicates a ${severity.text.toLowerCase()} condition level based on lesion area and symptom intensity.`
+              ? (severity.text === 'Clear' 
+                  ? 'AI analysis did not detect any signs of psoriasis in the uploaded image.'
+                  : `AI analysis indicates a ${severity.text.toLowerCase()} condition level based on lesion area and symptom intensity.`)
               : 'Complete the assessment to get a severity score.'}
           </Text>
         </View>
