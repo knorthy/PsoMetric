@@ -51,15 +51,30 @@ export default function App() {
   const loadHistory = async () => {
     try {
       const data = await fetchAssessmentHistory();
-      const list = Array.isArray(data) ? data : [];
-      const formatted = list.map((item, index) => ({
-        id: item.timestamp || String(index),
-        title: item.timestamp ? new Date(item.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : `Assessment ${index + 1}`,
-        ...item
-      }));
+      // Handle both { assessments: [...] } and [...] formats
+      const list = data.assessments || (Array.isArray(data) ? data : []);
+      
+      const formatted = list.map((item, index) => {
+        // Handle created_at (new backend) vs timestamp (legacy)
+        const dateStr = item.created_at || item.timestamp;
+        
+        return {
+          id: item.assessment_id || item.id || String(index),
+          title: dateStr 
+            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
+            : `Assessment ${index + 1}`,
+          // Ensure we pass the date field expected by result screen
+          created_at: dateStr,
+          timestamp: dateStr,
+          ...item
+        };
+      });
+      
       formatted.sort((a, b) => {
-        if (a.timestamp && b.timestamp) {
-          return new Date(b.timestamp) - new Date(a.timestamp);
+        const dateA = a.created_at || a.timestamp;
+        const dateB = b.created_at || b.timestamp;
+        if (dateA && dateB) {
+          return new Date(dateB) - new Date(dateA);
         }
         return 0;
       });
@@ -72,16 +87,58 @@ export default function App() {
   const handleSelectAssessment = async (assessment) => {
     try {
       setHistoryVisible(false);
-      // If the assessment object already has detailed fields, we might not need to fetch.
-      // But to be safe and ensure we have the full data as stored in DB:
-      if (assessment.timestamp) {
-        const fullResult = await fetchAssessmentResult(assessment.timestamp);
+      
+      // Use created_at for the new backend structure
+      const lookupDate = assessment.created_at || assessment.timestamp;
+      
+      if (lookupDate) {
+        const fullResult = await fetchAssessmentResult(lookupDate);
+        
+        console.log("📥 Full result from backend:", JSON.stringify(fullResult, null, 2));
+        
+        // Flatten questionnaire data if it's nested
+        const questionnaire = fullResult.questionnaire || {};
+        
+        // Prepare params - stringify arrays/objects for router
+        const params = {
+          // ML Analysis fields
+          global_score: fullResult.global_score,
+          diagnosis: fullResult.diagnosis,
+          erythema: fullResult.erythema,
+          induration: fullResult.induration,
+          scaling: fullResult.scaling,
+          lesions_found: fullResult.lesions_found,
+          annotated_image_base64: fullResult.annotated_image_base64,
+          
+          // LLM recommendations - stringify arrays
+          next_steps: JSON.stringify(fullResult.next_steps || []),
+          additional_notes: fullResult.additional_notes,
+          
+          // Questionnaire fields (flattened)
+          gender: questionnaire.gender || fullResult.gender,
+          age: questionnaire.age || fullResult.age,
+          psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
+          location: JSON.stringify(questionnaire.location || fullResult.location || []),
+          appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
+          size: JSON.stringify(questionnaire.size || fullResult.size || []),
+          itching: questionnaire.itching || fullResult.itching || 0,
+          pain: questionnaire.pain || fullResult.pain || 0,
+          jointPain: questionnaire.jointPain || fullResult.jointPain,
+          jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
+          dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
+          currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
+          
+          // Metadata
+          assessment_id: fullResult.assessment_id,
+          created_at: fullResult.created_at,
+        };
+
         router.push({
           pathname: '/result',
-          params: fullResult
+          params: params
         });
       } else {
-        // Fallback if no timestamp
+        // Fallback
         router.push({
           pathname: '/result',
           params: assessment

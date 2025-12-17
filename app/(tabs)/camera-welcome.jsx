@@ -24,8 +24,8 @@ import { setTempData } from '../../helpers/dataStore';
 import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
 
 // ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-const BACKEND_UPLOAD_URL = 'http://192.168.68.109:8000/analyze/';
-const QUESTIONNAIRE_SUBMIT_URL = 'http://192.168.68.109:8000/questionnaire/submit';
+// Single endpoint for combined questionnaire + image analysis
+const BACKEND_ANALYZE_URL = 'http://192.168.68.109:8000/analyze/';
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
@@ -99,105 +99,106 @@ export default function CameraWelcome() {
       setImage(uri);
       setUploading(true);
 
-      // 2. Create FormData
+      // 2. Get questionnaire data FIRST
+      const questionnaireData = getFullQuestionnaire();
+      console.log("📋 Questionnaire Data:", JSON.stringify(questionnaireData, null, 2));
+
+      // Validate questionnaire has data
+      const hasQuestionnaireData = questionnaireData && 
+        (questionnaireData.screen1 || questionnaireData.screen2 || questionnaireData.screen3);
+      
+      if (!hasQuestionnaireData) {
+        Alert.alert(
+          'Missing Questionnaire',
+          'Please complete the questionnaire before uploading an image.',
+          [{ text: 'OK' }]
+        );
+        setUploading(false);
+        return;
+      }
+
+      // 3. Create FormData with BOTH image and questionnaire
       const formData = new FormData();
       
-      // ⚠️ CRITICAL FIX: The name must be 'file' to match FastAPI: file: UploadFile
+      // Add image file
       formData.append('file', {
         uri: uri,
         name: fileName,
         type: type,
       });
 
-      console.log("🚀 Uploading to:", BACKEND_UPLOAD_URL);
+      // Add questionnaire as JSON string (backend will parse)
+      const questionnairePayload = {
+        // Flatten all screens into single object
+        ...questionnaireData.screen1,
+        ...questionnaireData.screen2,
+        ...questionnaireData.screen3,
+        // Add user info (both camelCase and snake_case to be safe)
+        userId: cognitoAuth.userId,
+        user_id: cognitoAuth.userId,
+        username: cognitoAuth.username,
+      };
+      
+      formData.append('questionnaire_data', JSON.stringify(questionnairePayload));
 
-      // 3. Send to Backend with JWT token
-      const response = await fetch(BACKEND_UPLOAD_URL, {
+      console.log("🚀 Uploading to:", BACKEND_ANALYZE_URL);
+      console.log("📤 Payload:", JSON.stringify(questionnairePayload, null, 2));
+
+      // 4. Send SINGLE request with both image + questionnaire
+      const response = await fetch(BACKEND_ANALYZE_URL, {
         method: 'POST',
         body: formData,
         headers: {
-          // 'Content-Type': 'multipart/form-data', // ❌ Don't set this manually for FormData!
-          ...authHeaders, // Add JWT token
+          // 'Content-Type': 'multipart/form-data', // ❌ Don't set manually
+          ...authHeaders,
         },
       });
 
       const responseText = await response.text();
-      console.log("Server Response:", responseText);
+      console.log("📥 Server Response:", responseText);
 
       if (!response.ok) {
         throw new Error(`Server Error ${response.status}: ${responseText}`);
       }
 
       const data = JSON.parse(responseText);
+      
+      // Backend returns COMPLETE result with:
+      // - ML analysis (scores, annotated image)
+      // - LLM-generated next steps
+      // - Stored record ID
+      console.log("✅ Complete analysis received:", Object.keys(data));
 
-      // 4. Submit Questionnaire Data to Backend
-      console.log("📋 Submitting questionnaire data...");
+      // 5. Store in temp storage and navigate
+      const resultId = data.assessment_id || Date.now().toString();
       
-      const questionnaireData = getFullQuestionnaire();
+      // ML Analysis data
+      setTempData(`analysis_${resultId}`, {
+        global_score: data.global_score,
+        diagnosis: data.diagnosis,
+        erythema: data.erythema,
+        induration: data.induration,
+        scaling: data.scaling,
+        lesions_found: data.lesions_found,
+        annotated_image_base64: data.annotated_image_base64,
+      });
       
-      // Add user info to questionnaire
-      const enrichedQuestionnaireData = {
-        ...questionnaireData,
-        userId: cognitoAuth.userId,
-        username: cognitoAuth.username,
-      };
-      
-      // 🧪 TEST: Log what we're sending
-      console.log("=" + "=".repeat(50));
-      console.log("📤 SENDING TO BACKEND:");
-      console.log("🆔 User ID:", cognitoAuth.userId);
-      console.log("👤 Username:", cognitoAuth.username);
-      console.log("📋 Full payload:", JSON.stringify(enrichedQuestionnaireData, null, 2));
-      console.log("=" + "=".repeat(50));
-      
-      let questionnaireResponse = null;
-      
-      try {
-        const questionnaireResult = await fetch(QUESTIONNAIRE_SUBMIT_URL, {
-          method: 'POST',
-          body: JSON.stringify(enrichedQuestionnaireData),
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders, // Add JWT token
-          },
-        });
+      // LLM-generated recommendations
+      setTempData(`questionnaire_${resultId}`, {
+        nextSteps: data.next_steps || data.nextSteps || [],
+        additionalNotes: data.additional_notes || data.additionalNotes || '',
+      });
 
-        if (questionnaireResult.ok) {
-          const questionnaireText = await questionnaireResult.text();
-          questionnaireResponse = JSON.parse(questionnaireText);
-          console.log("=" + "=".repeat(50));
-          console.log("📥 BACKEND RESPONSE:");
-          console.log(JSON.stringify(questionnaireResponse, null, 2));
-          console.log("=" + "=".repeat(50));
-          console.log("✅ Questionnaire submitted successfully");
-          
-          // Clear assessment data after successful submission
-          await resetAssessment();
-        } else {
-          const errorText = await questionnaireResult.text();
-          console.error("❌ Questionnaire submission failed:", questionnaireResult.status, errorText);
-          console.warn("⚠️ Questionnaire submission failed, continuing with image results only");
-        }
-      } catch (questionnaireError) {
-        console.error('Questionnaire submission error:', questionnaireError);
-        // Continue even if questionnaire fails - user still gets image analysis
-      }
-
-      // 5. Navigate to Result Screen with Both Data Sources
-      // Store large data in temp storage to avoid navigation param limits
-      const resultId = Date.now().toString();
-      setTempData(`analysis_${resultId}`, data);
-      setTempData(`questionnaire_${resultId}`, questionnaireResponse);
+      // Clear assessment context after successful submission
+      await resetAssessment();
 
       router.push({
         pathname: '/(tabs)/result',
         params: {
           resultId: resultId,
           images: [uri],
-          // Questionnaire data (for display)
-          ...questionnaireData.screen1,
-          ...questionnaireData.screen2,
-          ...questionnaireData.screen3,
+          // Pass questionnaire data for display in result screen
+          ...questionnairePayload,
         }
       });
 
