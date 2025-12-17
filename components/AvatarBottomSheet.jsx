@@ -1,20 +1,42 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from './AuthContext';
 
 export default function AvatarBottomSheet({ onPick, onClose }) {
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleViewProfile = () => {
+    onClose?.();
+    // keep callback for compatibility
+    onPick?.('viewProfile');
+    router.push('/viewprofile');
+  };
+
+  const handleLogout = async () => {
+    onClose?.();
+    try {
+      await logout();
+      router.replace('/welcome');
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Account Options</Text>
 
       <TouchableOpacity
         style={[styles.optionButton, styles.primary]}
-        onPress={() => onPick?.('viewProfile')}
+        onPress={handleViewProfile}
       >
         <Text style={styles.optionText}>View Profile</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.optionButton, styles.secondary]}
-        onPress={() => onPick?.('changeAvatar')}
+        onPress={handleLogout}
       >
         <Text style={styles.optionText}>Logout</Text>
       </TouchableOpacity>
@@ -22,9 +44,7 @@ export default function AvatarBottomSheet({ onPick, onClose }) {
       <TouchableOpacity
         style={[styles.optionButton, styles.cancel]}
         onPress={() => onClose?.()}
-      >
-
-      </TouchableOpacity>
+      />
     </View>
   );
 }
