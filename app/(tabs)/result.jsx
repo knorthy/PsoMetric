@@ -9,6 +9,7 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -25,6 +26,8 @@ export default function ResultScreen() {
 
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
+  // Toggle for showing/hiding ML overlay (annotated image)
+  const [showOverlay, setShowOverlay] = useState(true);
   const snapPoints = ["25%"];
 
   const handleAvatarPress = useCallback(() => {
@@ -222,8 +225,11 @@ export default function ResultScreen() {
   }
 
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
-  // Use annotated image from ML if available, otherwise first uploaded image
-  const displayImage = mlAnalysis?.annotated_image_base64 || mlAnalysis?.annotated_image || mlAnalysis?.annotated_image_url || imageList[0];
+  // Choose annotated image and original image
+  const annotatedImage = mlAnalysis?.annotated_image_base64 || mlAnalysis?.annotated_image || mlAnalysis?.annotated_image_url;
+  const originalImage = imageList[0];
+  // Show annotated image when overlay enabled and annotated image exists, otherwise show original upload
+  const displayImage = (showOverlay && annotatedImage) ? annotatedImage : (originalImage || annotatedImage || null);
 
   // Parse backend questionnaire response
   // (Already handled above via store or params)
@@ -270,7 +276,7 @@ export default function ResultScreen() {
         </View>
 
         {/* AI Lesion Analysis */}
-        <Text style={styles.sectionTitle}>AI Lesion Analysis</Text>
+        <Text style={styles.sectionTitle}>Lesion Analysis</Text>
         <View style={styles.aiAnalysisCard}>
           {displayImage ? (
             <View style={styles.analysisImageContainer}>
@@ -286,7 +292,15 @@ export default function ResultScreen() {
               <Text style={{color: '#999'}}>No image analyzed</Text>
             </View>
           )}
-          <Text style={styles.segmentationNote}>⊕ Segmentation View: The AI detected {mlAnalysis?.lesions_found || mlAnalysis?.lesion_count || 'multiple'} lesion(s) (highlighted).</Text>
+          <View style={styles.overlayToggleRow}>
+            <Text style={styles.overlayToggleLabel}>{showOverlay ? 'Overlay: On' : 'Overlay: Off'}</Text>
+            <Switch
+              value={showOverlay}
+              onValueChange={(v) => setShowOverlay(v)}
+            />
+          </View>
+
+          <Text style={styles.segmentationNote}>⊕ Segmentation View: The PsoMetric detected {mlAnalysis?.lesions_found || mlAnalysis?.lesion_count || 'multiple'} lesion(s) (highlighted).</Text>
 
           <Text style={styles.subSectionTitle}>Symptom Breakdown</Text>
           
@@ -350,10 +364,20 @@ export default function ResultScreen() {
         <Text style={styles.sectionTitle}>Detailed Report</Text>
         <View style={styles.detailCard}>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Location</Text><Text style={styles.detailValue}>{list(location)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Gender</Text><Text style={styles.detailValue}>{show(gender, '-')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Age</Text><Text style={styles.detailValue}>{show(age, '-')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>History of Psoriasis</Text><Text style={styles.detailValue}>{show(psoriasis_history, 'Not specified')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Appearance</Text><Text style={styles.detailValue}>{list(appearance)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Size</Text><Text style={styles.detailValue}>{list(size)}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Itching Level</Text><Text style={styles.detailValue}>{show(itching, '0')}/10</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Pain Level</Text><Text style={styles.detailValue}>{show(pain, '0')}/10</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Bleeding</Text><Text style={styles.detailValue}>{show(bleeding, '0')}/10</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Triggers</Text><Text style={styles.detailValue}>{list(triggers)}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Stress Factor</Text><Text style={styles.detailValue}>{yesNo(worsen_with_stress)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Daily Impact</Text><Text style={styles.detailValue}>{show(daily_impact, 'Not specified')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joint Pain</Text><Text style={styles.detailValue}>{yesNo(joint_pain)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joints Affected</Text><Text style={styles.detailValue}>{list(joints_affected)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Current Treatment</Text><Text style={styles.detailValue}>{show(current_treatment, 'None')}</Text></View>
         </View>
 
         {/* Recommendations */}
@@ -475,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007AFF',
     textAlign: 'center',
-    marginVertical: hp(3),
+    marginVertical: hp(1),
   },
 
   scrollContent: { 
@@ -699,7 +723,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: wp(6),
     paddingVertical: hp(2),
-    paddingBottom: Platform.OS === 'ios' ? hp(4) : hp(2),
+    paddingBottom: Platform.OS === 'ios' ? hp(2) : hp(1),
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
@@ -781,6 +805,17 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     marginBottom: hp(1),
+  },
+  overlayToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(1),
+  },
+  overlayToggleLabel: {
+    fontSize: hp(2),
+    color: '#333',
+    fontWeight: '600',
   },
   symptomRow: {
     marginBottom: hp(2),
