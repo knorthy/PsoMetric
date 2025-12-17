@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -145,9 +146,14 @@ const SignIn = () => {
           onPress={handleSignIn}
           disabled={loading}
         >
-          <Text style={styles.textButton}>
-            {loading ? 'SIGNING IN...' : 'SIGN IN'}
-          </Text>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#50a2ffff" />
+              <Text style={[styles.textButton, { marginLeft: 8 }]}>SIGNING IN...</Text>
+            </View>
+          ) : (
+            <Text style={styles.textButton}>SIGN IN</Text>
+          )}
         </Pressable>
 
         {/* Sign Up Link */}
@@ -228,6 +234,11 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textButton: {
     color: '#50a2ffff',

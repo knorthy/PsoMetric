@@ -20,7 +20,7 @@ import { hp, wp } from '../../helpers/common';
 import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function App() {
-  const { user, session } = useAuth();
+  const { user, session, avatar } = useAuth();
 
   const formatName = (raw) => {
     if (!raw) return 'there';
@@ -167,11 +167,11 @@ export default function App() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-          <Image
-            source={require('../../assets/images/avatar.jpg')}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
+          {avatar ? (
+            <Image source={{ uri: avatar }} style={styles.avatar} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -330,6 +330,11 @@ const styles = StyleSheet.create({
   avatar: {
     width: '100%',
     height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
   },
 
   greeting: {

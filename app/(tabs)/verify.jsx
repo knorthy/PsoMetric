@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -35,17 +35,28 @@ const VerifyScreen = () => {
     try {
       const { isSignUpComplete } = await confirmSignUp(email, code.trim());
 
+      setLoading(false);
+      
       if (isSignUpComplete) {
-        router.replace('/(tabs)/home'); 
+        Alert.alert(
+          'Account Verified!',
+          'Your account has been verified successfully. You can now sign in.',
+          [
+            {
+              text: 'Sign In',
+              onPress: () => router.replace('/signin'),
+            },
+          ],
+          { cancelable: false }
+        );
       }
     } catch (error) {
+      setLoading(false);
       console.log('Verification Error:', error);
       Alert.alert(
         'Verification Failed',
         error.message || 'Invalid or expired code. Please try again.'
       );
-    } finally {
-      setLoading(false);
     }
   };
 

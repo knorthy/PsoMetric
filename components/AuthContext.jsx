@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getCurrentUser, signOut, syncAuthStorage } from '../services/cognito';
 
@@ -7,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
+  const [avatar, setAvatar] = useState(null);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -14,7 +16,15 @@ export const AuthProvider = ({ children }) => {
       // Sync storage first (load from AsyncStorage to Memory)
       await syncAuthStorage();
       // Then check status
-      checkAuthStatus();
+      await checkAuthStatus();
+
+      // Load persisted avatar URI (if any)
+      try {
+        const stored = await AsyncStorage.getItem('user_avatar_uri');
+        if (stored) setAvatar(stored);
+      } catch (e) {
+        console.error('Failed to load avatar from storage', e);
+      }
     };
     
     initAuth();
@@ -73,6 +83,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Persist avatar URI and update state
+  const setAndPersistAvatar = async (uri) => {
+    try {
+      if (uri) {
+        await AsyncStorage.setItem('user_avatar_uri', uri);
+        setAvatar(uri);
+      } else {
+        await AsyncStorage.removeItem('user_avatar_uri');
+        setAvatar(null);
+      }
+    } catch (e) {
+      console.error('Failed to persist avatar', e);
+    }
+  };
+
   const value = {
     user,
     session,
@@ -84,6 +109,9 @@ export const AuthProvider = ({ children }) => {
     getAuthToken,
     getUserId,
     setAuth, // Export this
+    // Avatar: uri string or null
+    avatar,
+    setAvatar: setAndPersistAvatar,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

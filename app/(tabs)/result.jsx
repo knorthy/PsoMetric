@@ -1,28 +1,116 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useAuth } from '../../components/AuthContext.jsx';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 import { getTempData } from '../../helpers/dataStore';
+import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
+  const router = useRouter();
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [assessments, setAssessments] = useState([]);
+
+  const { avatar } = useAuth();
+
+  // Load history when sidebar opens
+  useEffect(() => {
+    if (historyVisible) {
+      loadHistory();
+    }
+  }, [historyVisible]);
+
+  const loadHistory = async () => {
+    try {
+      const data = await fetchAssessmentHistory();
+      const list = data.assessments || (Array.isArray(data) ? data : []);
+      
+      const formatted = list.map((item, index) => {
+        const dateStr = item.created_at || item.timestamp;
+        return {
+          id: item.assessment_id || item.id || String(index),
+          title: dateStr 
+            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
+            : `Assessment ${index + 1}`,
+          created_at: dateStr,
+          timestamp: dateStr,
+          ...item
+        };
+      });
+      
+      formatted.sort((a, b) => {
+        const dateA = a.created_at || a.timestamp;
+        const dateB = b.created_at || b.timestamp;
+        if (dateA && dateB) {
+          return new Date(dateB) - new Date(dateA);
+        }
+        return 0;
+      });
+      setAssessments(formatted);
+    } catch (error) {
+      console.error('Failed to load history', error);
+    }
+  };
+
+  const handleSelectAssessment = async (assessment) => {
+    try {
+      setHistoryVisible(false);
+      const lookupDate = assessment.created_at || assessment.timestamp;
+      
+      if (lookupDate) {
+        const fullResult = await fetchAssessmentResult(lookupDate);
+        const questionnaire = fullResult.questionnaire || {};
+        
+        router.replace({
+          pathname: '/result',
+          params: {
+            global_score: fullResult.global_score,
+            diagnosis: fullResult.diagnosis,
+            erythema: fullResult.erythema,
+            induration: fullResult.induration,
+            scaling: fullResult.scaling,
+            lesions_found: fullResult.lesions_found,
+            annotated_image_base64: fullResult.annotated_image_base64,
+            next_steps: JSON.stringify(fullResult.next_steps || []),
+            additional_notes: fullResult.additional_notes,
+            gender: questionnaire.gender || fullResult.gender,
+            age: questionnaire.age || fullResult.age,
+            psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
+            location: JSON.stringify(questionnaire.location || fullResult.location || []),
+            appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
+            size: JSON.stringify(questionnaire.size || fullResult.size || []),
+            itching: questionnaire.itching || fullResult.itching || 0,
+            pain: questionnaire.pain || fullResult.pain || 0,
+            jointPain: questionnaire.jointPain || fullResult.jointPain,
+            jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
+            dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
+            currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
+            assessment_id: fullResult.assessment_id,
+            created_at: fullResult.created_at,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching assessment:', error);
+    }
+  };
 
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
@@ -279,7 +367,11 @@ export default function ResultScreen() {
               <Ionicons name="menu" size={30} color="#333" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-              <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -462,7 +554,12 @@ export default function ResultScreen() {
 
     </SafeAreaView>
 
-    <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
+    <History
+      visible={historyVisible}
+      onClose={() => setHistoryVisible(false)}
+      onSelectAssessment={handleSelectAssessment}
+      assessments={assessments}
+    />
 
     <BottomSheetModal
       ref={sheetRef}
@@ -522,6 +619,7 @@ const styles = StyleSheet.create({
     width: '100%', 
     height: '100%' 
   },
+  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: 'transparent' },
 
   pageTitle: {
     fontSize: hp(3.4),
