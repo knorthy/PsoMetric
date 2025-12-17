@@ -17,7 +17,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
-import { getTempData } from '../../helpers/dataStore';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
@@ -25,6 +24,7 @@ export default function ResultScreen() {
 
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(true);
   const snapPoints = ["25%"];
 
   const handleAvatarPress = useCallback(() => {
@@ -79,51 +79,8 @@ export default function ResultScreen() {
     pasi_score = '0',        // string from backend or calculated
     
     // NEW: Backend questionnaire response with GenAI recommendations
-    questionnaireResult,     // JSON string from backend (legacy)
-    analysisResult,          // JSON string from ML model (legacy)
-    resultId,                // ID to fetch data from store
+    questionnaireResult,     // JSON string from backend
   } = params;
-
-  // === Retrieve Data from Store or Params ===
-  let mlAnalysis = null;
-  let genAIRecommendations = null;
-
-  // 1. Try fetching from store first (preferred for large data)
-  if (resultId) {
-    const storedAnalysis = getTempData(`analysis_${resultId}`);
-    const storedQuestionnaire = getTempData(`questionnaire_${resultId}`);
-    
-    if (storedAnalysis) mlAnalysis = storedAnalysis;
-    if (storedQuestionnaire) genAIRecommendations = storedQuestionnaire;
-  }
-
-  // 2. Fallback to params if not in store
-  if (!mlAnalysis && analysisResult) {
-    try {
-      mlAnalysis = JSON.parse(analysisResult);
-    } catch (e) {
-      console.error('Failed to parse analysis result from params:', e);
-    }
-  }
-
-  if (!genAIRecommendations && questionnaireResult) {
-    try {
-      genAIRecommendations = JSON.parse(questionnaireResult);
-    } catch (e) {
-      console.error('Failed to parse questionnaire result from params:', e);
-    }
-  }
-
-  // === DEBUG LOGS ===
-  console.log("=== RESULT SCREEN DATA ===");
-  console.log("Result ID:", resultId);
-  console.log("ML Analysis found:", !!mlAnalysis);
-  if (mlAnalysis) {
-    console.log("ML Analysis Keys:", Object.keys(mlAnalysis));
-    console.log("ML Analysis Details:", JSON.stringify(mlAnalysis.details || mlAnalysis.subscores || "No details/subscores"));
-    console.log("ML Analysis Full:", JSON.stringify(mlAnalysis, null, 2));
-  }
-  console.log("GenAI Recommendations found:", !!genAIRecommendations);
 
   // === Helper Functions ===
   const show = (value, fallback = 'Not provided') => value || fallback;
@@ -136,97 +93,32 @@ export default function ResultScreen() {
     return String(arr);
   };
 
-  // Determine Scores from ML or Fallback to PASI
-  // Backend returns: { global_score, details: { erythema, induration, scaling }, annotated_image_base64 }
-  const mlScore = mlAnalysis?.global_score || mlAnalysis?.score || mlAnalysis?.severity_score || parseFloat(pasi_score) || 0;
-  // Check if we have a valid analysis result (even if score is 0, e.g. "Clear")
-  const hasResult = !!mlAnalysis || parseFloat(pasi_score) > 0;
-  const hasScore = hasResult;
-  const displayScore = hasResult ? mlScore.toFixed(1) : '—';
-  
-  // Handle 'details' potentially being a JSON string or object
-  let detailsObj = mlAnalysis?.details || mlAnalysis?.subscores || mlAnalysis?.symptoms || {};
-  
-  // Check if it's a string and try to parse it
-  if (typeof detailsObj === 'string') {
-    try {
-      // Try standard JSON parse
-      detailsObj = JSON.parse(detailsObj);
-    } catch (e) {
-      console.log("Standard JSON parse failed for details, trying to fix quotes...");
-      try {
-        // Handle Python-style dict string: {'key': val} -> {"key": val}
-        const fixedStr = detailsObj.replace(/'/g, '"').replace(/None/g, 'null').replace(/False/g, 'false').replace(/True/g, 'true');
-        detailsObj = JSON.parse(fixedStr);
-      } catch (e2) {
-        console.error("Failed to parse details string:", e2);
-        detailsObj = {};
-      }
-    }
-  }
+  const formatList = (arr) => arr && arr.length > 0 ? arr.join(', ') : 'None';
 
-  console.log("Parsed Details Object:", JSON.stringify(detailsObj));
+  // PASI Score Handling
+  const rawScore = parseFloat(pasi_score) || 0;
+  const hasScore = rawScore > 0;
 
-  // Helper to find key case-insensitively
-  const findKey = (obj, key) => {
-    if (!obj || typeof obj !== 'object') return undefined;
-    const found = Object.keys(obj).find(k => k.toLowerCase() === key.toLowerCase());
-    return found ? obj[found] : undefined;
-  };
+  const severity = hasScore
+    ? rawScore < 10
+      ? { text: 'Mild', color: '#34C759' }
+      : rawScore < 20
+      ? { text: 'Moderate', color: '#FF9F0A' }
+      : { text: 'Severe', color: '#FF3B30' }
+    : { text: 'Pending', color: '#999999' };
 
-  let erythema = 0;
-  let induration = 0;
-  let scaling = 0;
-
-  if (Array.isArray(detailsObj) && detailsObj.length > 0) {
-      // If details is an array of lesions, take the maximum score for each symptom
-      console.log("Details is an array of lesions. Calculating max scores...");
-      erythema = Math.max(...detailsObj.map(d => d.erythema || d.redness || 0));
-      induration = Math.max(...detailsObj.map(d => d.induration || d.thickness || 0));
-      scaling = Math.max(...detailsObj.map(d => d.desquamation || d.scaling || d.flaking || 0));
-  } else {
-      // Subscores (Default to 0 if not found)
-      // We check for medical terms (Erythema) and common terms (Redness)
-      erythema = findKey(detailsObj, 'erythema') || findKey(detailsObj, 'redness') || findKey(mlAnalysis, 'erythema') || 0;
-      induration = findKey(detailsObj, 'induration') || findKey(detailsObj, 'thickness') || findKey(mlAnalysis, 'induration') || 0;
-      scaling = findKey(detailsObj, 'scaling') || findKey(detailsObj, 'desquamation') || findKey(detailsObj, 'flaking') || findKey(mlAnalysis, 'scaling') || findKey(mlAnalysis, 'desquamation') || 0;
-  }
-
-  console.log("Resolved Subscores:", { erythema, induration, scaling });
-
-  // Severity Logic (Adjusted for 0-10 scale if ML is used, or 0-72 if PASI)
-  // If score is small (<10), assume it's the 0-10 scale. If larger, assume PASI.
-  const isTenScale = mlScore <= 10; 
-  const maxScore = isTenScale ? 10 : 72;
-
-  let severity = { text: 'Pending', color: '#999999' };
-
-  if (mlAnalysis?.diagnosis) {
-      const d = mlAnalysis.diagnosis.toLowerCase();
-      if (d === 'clear') severity = { text: 'Clear', color: '#34C759' };
-      else if (d === 'mild') severity = { text: 'Mild', color: '#34C759' };
-      else if (d === 'moderate') severity = { text: 'Moderate', color: '#FF9F0A' };
-      else if (d === 'severe') severity = { text: 'Severe', color: '#FF3B30' };
-      else severity = { text: mlAnalysis.diagnosis, color: '#007AFF' };
-  } else if (hasResult) {
-      if (isTenScale) {
-          if (mlScore < 1) severity = { text: 'Clear', color: '#34C759' };
-          else if (mlScore < 3) severity = { text: 'Mild', color: '#34C759' };
-          else if (mlScore < 7) severity = { text: 'Moderate', color: '#FF9F0A' };
-          else severity = { text: 'Severe', color: '#FF3B30' };
-      } else {
-          if (mlScore < 10) severity = { text: 'Mild', color: '#34C759' };
-          else if (mlScore < 20) severity = { text: 'Moderate', color: '#FF9F0A' };
-          else severity = { text: 'Severe', color: '#FF3B30' };
-      }
-  }
-
+  const displayScore = hasScore ? rawScore.toFixed(1) : '—';
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
-  // Use annotated image from ML if available, otherwise first uploaded image
-  const displayImage = mlAnalysis?.annotated_image_base64 || mlAnalysis?.annotated_image || mlAnalysis?.annotated_image_url || imageList[0];
 
   // Parse backend questionnaire response
-  // (Already handled above via store or params)
+  let genAIRecommendations = null;
+  try {
+    if (questionnaireResult) {
+      genAIRecommendations = JSON.parse(questionnaireResult);
+    }
+  } catch (e) {
+    console.error('Failed to parse questionnaire result:', e);
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -248,116 +140,130 @@ export default function ResultScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Global Severity Score Card */}
+        {/* PASI Score Card */}
         <View style={styles.summaryCard}>
-          <Text style={styles.cardTitle}>GLOBAL SEVERITY SCORE</Text>
           <Text style={styles.summaryMainScore}>{displayScore}</Text>
-          <Text style={styles.outOf72}>out of {maxScore.toFixed(1)}</Text>
-          
-          <View style={[styles.severityPill, { backgroundColor: severity.color + '20' }]}>
-            <Text style={[styles.severityPillText, { color: severity.color }]}>
-              {hasScore ? (severity.text === 'Clear' ? 'No Psoriasis Detected' : `${severity.text} Psoriasis`) : 'Assessment Incomplete'}
+          <Text style={styles.outOf72}>out of 72</Text>
+          <View style={[styles.severityPill, { backgroundColor: severity.color }]}>
+            <Text style={styles.severityPillText}>
+              {hasScore ? `${severity.text} Psoriasis` : 'Assessment Incomplete'}
             </Text>
           </View>
-          
           <Text style={styles.summaryDescription}>
-            {hasScore 
-              ? (severity.text === 'Clear' 
-                  ? 'AI analysis did not detect any signs of psoriasis in the uploaded image.'
-                  : `AI analysis indicates a ${severity.text.toLowerCase()} condition level based on lesion area and symptom intensity.`)
-              : 'Complete the assessment to get a severity score.'}
-          </Text>
+  {hasScore ? (
+    severityDescription
+  ) : (
+    <>
+      {/* This empty View adds extra space only in the "no data" case */}
+      <View style={{ height: hp(5.2) }} />
+      <Text style={{ fontSize: hp(1.9), color: '#999', textAlign: 'center' }}>
+        Severity not assessed yet
+      </Text>
+    </>
+  )}
+</Text>
         </View>
 
-        {/* AI Lesion Analysis */}
-        <Text style={styles.sectionTitle}>AI Lesion Analysis</Text>
-        <View style={styles.aiAnalysisCard}>
-          {displayImage ? (
-            <View style={styles.analysisImageContainer}>
-              <Image 
-                source={{ uri: displayImage.startsWith('http') || displayImage.startsWith('file') ? displayImage : `data:image/jpeg;base64,${displayImage}` }} 
-                style={styles.analysisImage} 
-                resizeMode="cover" 
-              />
-              {/* Overlay boxes could be drawn here if coordinates were available separately, but assuming image is pre-annotated */}
-            </View>
-          ) : (
-            <View style={styles.noImagePlaceholder}>
-              <Text style={{color: '#999'}}>No image analyzed</Text>
-            </View>
-          )}
-          <Text style={styles.segmentationNote}>⊕ Segmentation View: The AI detected {mlAnalysis?.lesions_found || mlAnalysis?.lesion_count || 'multiple'} lesion(s) (highlighted).</Text>
-
-          <Text style={styles.subSectionTitle}>Symptom Breakdown</Text>
-          
-          {/* Erythema */}
-          <View style={styles.symptomRow}>
-            <View style={styles.symptomHeader}>
-              <Text style={styles.symptomLabel}>Erythema (Redness)</Text>
-              <Text style={[styles.symptomScore, {color: '#FF3B30'}]}>{erythema}/4</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${(erythema/4)*100}%`, backgroundColor: '#FF3B30' }]} />
-            </View>
-          </View>
-
-          {/* Induration */}
-          <View style={styles.symptomRow}>
-            <View style={styles.symptomHeader}>
-              <Text style={styles.symptomLabel}>Induration (Thickness)</Text>
-              <Text style={[styles.symptomScore, {color: '#007AFF'}]}>{induration}/4</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${(induration/4)*100}%`, backgroundColor: '#007AFF' }]} />
-            </View>
-          </View>
-
-          {/* Desquamation */}
-          <View style={styles.symptomRow}>
-            <View style={styles.symptomHeader}>
-              <Text style={styles.symptomLabel}>Desquamation (Scaling)</Text>
-              <Text style={[styles.symptomScore, {color: '#8E8E93'}]}>{scaling}/4</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${(scaling/4)*100}%`, backgroundColor: '#8E8E93' }]} />
-            </View>
-          </View>
-        </View>
-
-        {/* Patient Context */}
-        {/* Patient Context */}
-        <Text style={styles.sectionTitle}>Patient Context</Text>
+        {/* Quick Facts */}
         <View style={styles.quickFacts}>
           <View style={styles.factBox}>
             <Text style={styles.factLabel}>Age</Text>
-            <Text style={styles.factValue}>{show(age, '-')}</Text>
+            <Text style={styles.factValue}>{show(age, '—')}</Text>
           </View>
           <View style={styles.factBox}>
             <Text style={styles.factLabel}>Gender</Text>
-            <Text style={styles.factValue}>{show(gender, '-')}</Text>
+            <Text style={styles.factValue}>{show(gender, '—')}</Text>
           </View>
           <View style={styles.factBox}>
-            <Text style={styles.factLabel}>Impact</Text>
-            <Text style={styles.factValue}>{show(daily_impact, 'Not specified')}</Text>
+            <Text style={styles.factLabel}>Daily Impact</Text>
+            <Text style={styles.factValue}>{show(daily_impact, '—')}</Text>
           </View>
           <View style={styles.factBox}>
             <Text style={styles.factLabel}>Joint Pain</Text>
-            <Text style={styles.factValue}>{yesNo(joint_pain) === 'Yes' ? 'Present' : 'Not specified'}</Text>
+            <Text style={styles.factValue}>{yesNo(joint_pain) === 'Yes' ? 'Present' : 'None'}</Text>
           </View>
         </View>
 
-        {/* Detailed Report */}
-        <Text style={styles.sectionTitle}>Detailed Report</Text>
+        {/* Detailed Summary */}
+        <Text style={styles.sectionTitle}>Detailed Symptom Summary</Text>
         <View style={styles.detailCard}>
+
+          <Text style={styles.subSectionTitle}>Basic Information</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Psoriasis History</Text>
+            <Text style={styles.detailValue}>
+              {psoriasis_history === 'first' ? 'First onset' : psoriasis_history === 'recurrent' ? 'Recurrent' : 'Not provided'}
+            </Text>
+          </View>
+
+          <Text style={styles.subSectionTitle}>Lesion Characteristics</Text>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Location</Text><Text style={styles.detailValue}>{list(location)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Itching Level</Text><Text style={styles.detailValue}>{show(itching, '0')}/10</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Bleeding</Text><Text style={styles.detailValue}>{show(bleeding, '0')}/10</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Triggers</Text><Text style={styles.detailValue}>{list(triggers)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Stress Factor</Text><Text style={styles.detailValue}>{yesNo(worsen_with_stress)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Appearance</Text><Text style={styles.detailValue}>{list(appearance)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Size of the Affected Area</Text><Text style={styles.detailValue}>{list(size)}</Text></View>
+
+          <Text style={styles.subSectionTitle}>Symptom Severity (0–10)</Text>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Itching</Text><Text style={styles.detailValue}>{show(itching, '—')}/10</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Pain</Text><Text style={styles.detailValue}>{show(pain, '—')}/10</Text></View>
+
+          <Text style={styles.subSectionTitle}>Quality of Life Impact</Text>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Daily activities</Text><Text style={styles.detailValue}>{show(daily_impact, '—')}</Text></View>
+
+          {joint_pain === 'yes' && (
+            <>
+              <Text style={styles.subSectionTitle}>Joint Symptoms (Psoriatic Arthritis Risk)</Text>
+              <View style={styles.detailRow}><Text style={styles.detailLabel}>Affected joints</Text><Text style={styles.detailValue}>{formatList(joints_affected)}</Text></View>
+            </>
+          )}
+
+          <Text style={styles.subSectionTitle}>Treatment</Text>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Current treatment</Text><Text style={styles.detailValue}>{show(current_treatment, 'None')}</Text></View>
         </View>
 
+        {/* AI Lesion Analysis */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>Lesion Analysis</Text>
+          {imageList.length > 0 && (
+            <TouchableOpacity 
+              style={styles.overlayToggle} 
+              onPress={() => setShowOverlay(!showOverlay)}
+            >
+              <Ionicons 
+                name={showOverlay ? "eye" : "eye-off"} 
+                size={20} 
+                color="#007AFF" 
+              />
+              <Text style={styles.overlayToggleText}>
+                {showOverlay ? 'Hide' : 'Show'} Detection
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {imageList.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: hp(4) }}>
+            {imageList.map((uri, i) => (
+              <View key={i} style={styles.imageContainer}>
+                <Image source={{ uri }} style={styles.uploadedImage} resizeMode="cover" />
+                {showOverlay && (
+                  <View style={styles.detectionOverlay}>
+                    {/* This represents the AI detection box overlay */}
+                    <View style={styles.detectionBox} />
+                  </View>
+                )}
+                <View style={styles.imageLabelContainer}>
+                  <Text style={styles.imageLabel}>Photo {i + 1}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.noImagesCard}>
+            <Ionicons name="camera-outline" size={40} color="#ccc" />
+            <Text style={styles.noImagesText}>No photos uploaded</Text>
+          </View>
+        )}
+
         {/* Recommendations */}
-        <Text style={styles.sectionTitle}>Next Steps</Text>
+        <Text style={styles.sectionTitle}>Personalized Recommendations</Text>
         <View style={styles.recommendationsCard}>
           {genAIRecommendations && genAIRecommendations.nextSteps ? (
             <>
@@ -634,6 +540,56 @@ const styles = StyleSheet.create({
     fontSize: hp(1.9) 
   },
 
+  imageLabelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: wp(3),
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(2),
+    marginTop: hp(4),
+  },
+
+  overlayToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E5F1FF',
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.8),
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+
+  overlayToggleText: {
+    color: '#007AFF',
+    fontSize: hp(1.6),
+    fontWeight: '600',
+    marginLeft: wp(1.5),
+  },
+
+  detectionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  detectionBox: {
+    width: '60%',
+    height: '50%',
+    borderWidth: 3,
+    borderColor: 'rgba(0, 122, 255, 0.8)',
+    backgroundColor: 'rgba(0, 122, 255, 0.25)',
+    borderRadius: 4,
+  },
+
   noImagesCard: {
     height: wp(85),
     backgroundColor: '#f9f9f9',
@@ -739,74 +695,5 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
     fontSize: hp(2.2), 
     marginLeft: wp(2) 
-  },
-
-  // === NEW STYLES FOR AI ANALYSIS ===
-  aiAnalysisCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: wp(5),
-    marginBottom: hp(4),
-    borderWidth: 1,
-    borderColor: '#E5E5FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  analysisImageContainer: {
-    width: '100%',
-    height: hp(30),
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: hp(2),
-    backgroundColor: '#f0f0f0',
-  },
-  analysisImage: {
-    width: '100%',
-    height: '100%',
-  },
-  noImagePlaceholder: {
-    width: '100%',
-    height: hp(20),
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: hp(2),
-  },
-  segmentationNote: {
-    fontSize: hp(1.8),
-    color: '#666',
-    fontStyle: 'italic',
-    marginBottom: hp(1),
-  },
-  symptomRow: {
-    marginBottom: hp(2),
-  },
-  symptomHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: hp(0.8),
-  },
-  symptomLabel: {
-    fontSize: hp(2),
-    fontWeight: '600',
-    color: '#444',
-  },
-  symptomScore: {
-    fontSize: hp(2),
-    fontWeight: '700',
-  },
-  progressBarBg: {
-    height: hp(1.2),
-    backgroundColor: '#EFEFF4',
-    borderRadius: hp(1),
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: hp(1),
-  },
+},
 });
