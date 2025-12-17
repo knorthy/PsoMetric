@@ -1,6 +1,9 @@
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useNavigation } from '@react-navigation/native';
+import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -12,8 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../components/AuthContext';
+import AvatarBottomSheet from '../../components/uploadavatar';
 import { hp, wp } from '../../helpers/common';
 import { changePassword, deleteCurrentUser, updateUserAttributes } from '../../services/cognito';
 
@@ -21,6 +26,9 @@ const ViewProfileScreen = () => {
   const navigation = useNavigation();
   const router = useRouter();
   const { user: authUser, session, checkAuthStatus, logout, setAuth } = useAuth();
+
+  const sheetRef = useRef(null);
+  const snapPoints = ["25%"];
 
   const [isEditing, setIsEditing] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -131,10 +139,67 @@ const ViewProfileScreen = () => {
   setIsEditing(false);
 };
 
-  const pickImage = () => {
-    // Placeholder: in a real app you'd open ImagePicker and upload or set local uri
-    Alert.alert('Image Picker', 'Gallery/camera will open in real app');
-    setEditedUser({ ...editedUser, avatar: { uri: 'https://randomuser.me/api/portraits/men/32.jpg' } });
+  const openCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Camera access is required to take a photo');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.cancelled && result.uri) {
+        setEditedUser({ ...editedUser, avatar: { uri: result.uri } });
+      } else if (result.assets && result.assets[0] && result.assets[0].uri) {
+        setEditedUser({ ...editedUser, avatar: { uri: result.assets[0].uri } });
+      }
+    } catch (err) {
+      console.error('Camera error', err);
+      Alert.alert('Error', 'Could not open camera');
+    }
+  };
+
+  const openLibrary = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Media library access is required to choose a photo');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.cancelled && result.uri) {
+        setEditedUser({ ...editedUser, avatar: { uri: result.uri } });
+      } else if (result.assets && result.assets[0] && result.assets[0].uri) {
+        setEditedUser({ ...editedUser, avatar: { uri: result.assets[0].uri } });
+      }
+    } catch (err) {
+      console.error('Image library error', err);
+      Alert.alert('Error', 'Could not open image library');
+    }
+  };
+
+  const pickImage = useCallback(() => {
+    sheetRef.current?.present();
+  }, []);
+
+  const handleAvatarPick = (option) => {
+    sheetRef.current?.dismiss();
+    if (option === 'viewProfile') {
+      openCamera();
+    } else if (option === 'changeAvatar') {
+      openLibrary();
+    }
   };
 
   const handleEditToggle = () => {
@@ -166,9 +231,11 @@ const ViewProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Fixed Header */}
-      <View style={styles.fixedHeader}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <SafeAreaView style={styles.container}>
+          {/* Fixed Header */}
+          <View style={styles.fixedHeader}>
         {isEditing && (
           <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
             <Icon name="arrow-back" size={28} color="#000" />
@@ -370,7 +437,32 @@ const ViewProfileScreen = () => {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+
+        </SafeAreaView>
+
+        <BottomSheetModal
+          ref={sheetRef}
+          snapPoints={snapPoints}
+          enablePanDownToClose={true}
+          backdropComponent={(props) => (
+            <BottomSheetBackdrop
+              {...props}
+              appearsOnIndex={0}
+              disappearsOnIndex={-1}
+              opacity={0.45}
+              pressBehavior="close"
+            />
+          )}
+        >
+          <BottomSheetView>
+            <AvatarBottomSheet
+              onPick={handleAvatarPick}
+              onClose={() => sheetRef.current?.dismiss()}
+            />
+          </BottomSheetView>
+        </BottomSheetModal>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 };
 
@@ -388,7 +480,6 @@ const styles = StyleSheet.create({
     paddingTop: hp(6),
     paddingBottom: hp(2),
     backgroundColor: '#f9f9f9',
-    zIndex: 10,
   },
 
   backButton: { 
