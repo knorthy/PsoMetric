@@ -13,12 +13,22 @@ import {
   View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useAuth } from '../../components/AuthContext.jsx';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function App() {
+  const { user, session } = useAuth();
+
+  const formatName = (raw) => {
+    if (!raw) return 'there';
+    const str = String(raw).trim();
+    if (!str) return 'there';
+    const first = str.split(/\s+/)[0];
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  };
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
   const snapPoints = ["25%"];
@@ -110,7 +120,7 @@ export default function App() {
 
       {/* Center content wrapper */}
       <View style={styles.centerContent}>
-        <Text style={styles.greeting}>Hello, Jasmine Vir!</Text>
+        <Text style={styles.greeting}>Hello, {formatName(session?.name || user?.username)}!</Text>
 
         <View style={styles.suggestionsWrapper}>
           {/* Row 1 */}
@@ -153,7 +163,7 @@ export default function App() {
       <View style={styles.bottomButtonContainer}>
         <TouchableOpacity 
           style={styles.startButton}
-          onPress={() => router.push('/assessment')}
+          onPress={() => router.push('/assess')}
         >
           <Text style={styles.startButtonText}>Start the Assessment</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" style={styles.arrowIcon} />

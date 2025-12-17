@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-    AuthenticationDetails,
-    CognitoUser,
-    CognitoUserAttribute,
-    CognitoUserPool
+  AuthenticationDetails,
+  CognitoUser,
+  CognitoUserAttribute,
+  CognitoUserPool
 } from 'amazon-cognito-identity-js';
 import 'react-native-get-random-values';
 import amplifyconfig from '../amplifyconfiguration.json';
@@ -275,4 +275,69 @@ export const getAuthHeaders = async () => {
   } catch (error) {
     return {};
   }
+};
+
+/**
+ * Update user attributes (e.g. name, email)
+ * @param {Object} attributes - object of attributeName: value
+ * @returns {Promise<any>}
+ */
+export const updateUserAttributes = (attributes = {}) => {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) return reject(new Error('No authenticated user'));
+
+    cognitoUser.getSession((err, session) => {
+      if (err) return reject(err);
+
+      const attrList = Object.keys(attributes).map((key) => new CognitoUserAttribute({ Name: key, Value: attributes[key] }));
+
+      cognitoUser.updateAttributes(attrList, (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  });
+};
+
+/**
+ * Change the current user's password
+ * @param {string} oldPassword
+ * @param {string} newPassword
+ * @returns {Promise<any>}
+ */
+export const changePassword = (oldPassword, newPassword) => {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) return reject(new Error('No authenticated user'));
+
+    cognitoUser.getSession((err, session) => {
+      if (err) return reject(err);
+
+      cognitoUser.changePassword(oldPassword, newPassword, (err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  });
+};
+
+/**
+ * Delete the currently authenticated user
+ * @returns {Promise<any>}
+ */
+export const deleteCurrentUser = () => {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) return reject(new Error('No authenticated user'));
+
+    cognitoUser.getSession((err, session) => {
+      if (err) return reject(err);
+
+      cognitoUser.deleteUser((err, result) => {
+        if (err) return reject(err);
+        resolve(result);
+      });
+    });
+  });
 };
