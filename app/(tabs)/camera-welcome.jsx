@@ -22,12 +22,11 @@ import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 import { setTempData } from '../../helpers/dataStore';
-import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
+import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 
-// ⚠️ IMPORTANT: Ensure this IP matches your laptop's IP (ipconfig)
-// Single endpoint for combined questionnaire + image analysis
-const BACKEND_ANALYZE_URL = 'http://192.168.31.117:8000/analyze/';
+// API URL from environment variable (.env file)
+const BACKEND_ANALYZE_URL = `${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.68.109:8000'}/analyze/`;
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
@@ -52,30 +51,7 @@ export default function CameraWelcome() {
 
   const loadHistory = async () => {
     try {
-      const data = await fetchAssessmentHistory();
-      const list = data.assessments || (Array.isArray(data) ? data : []);
-      
-      const formatted = list.map((item, index) => {
-        const dateStr = item.created_at || item.timestamp;
-        return {
-          id: item.assessment_id || item.id || String(index),
-          title: dateStr 
-            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
-            : `Assessment ${index + 1}`,
-          created_at: dateStr,
-          timestamp: dateStr,
-          ...item
-        };
-      });
-      
-      formatted.sort((a, b) => {
-        const dateA = a.created_at || a.timestamp;
-        const dateB = b.created_at || b.timestamp;
-        if (dateA && dateB) {
-          return new Date(dateB) - new Date(dateA);
-        }
-        return 0;
-      });
+      const formatted = await loadAssessmentHistory();
       setAssessments(formatted);
     } catch (error) {
       console.error('Failed to load history', error);
@@ -90,43 +66,11 @@ export default function CameraWelcome() {
   const handleSelectAssessment = async (assessment) => {
     try {
       setHistoryVisible(false);
-      const lookupDate = assessment.created_at || assessment.timestamp;
-      
-      if (lookupDate) {
-        const fullResult = await fetchAssessmentResult(lookupDate);
-        const questionnaire = fullResult.questionnaire || {};
-        
-        router.push({
-          pathname: '/result',
-          params: {
-            global_score: fullResult.global_score,
-            diagnosis: fullResult.diagnosis,
-            erythema: fullResult.erythema,
-            induration: fullResult.induration,
-            scaling: fullResult.scaling,
-            lesions_found: fullResult.lesions_found,
-            annotated_image_base64: fullResult.annotated_image_base64,
-            next_steps: JSON.stringify(fullResult.next_steps || []),
-            additional_notes: fullResult.additional_notes,
-            gender: questionnaire.gender || fullResult.gender,
-            age: questionnaire.age || fullResult.age,
-            psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
-            location: JSON.stringify(questionnaire.location || fullResult.location || []),
-            appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
-            size: JSON.stringify(questionnaire.size || fullResult.size || []),
-            itching: questionnaire.itching || fullResult.itching || 0,
-            pain: questionnaire.pain || fullResult.pain || 0,
-            jointPain: questionnaire.jointPain || fullResult.jointPain,
-            jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
-            dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
-            currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
-            assessment_id: fullResult.assessment_id,
-            created_at: fullResult.created_at,
-          }
-        });
-      }
+      const params = await getAssessmentForNavigation(assessment);
+      router.push({ pathname: '/result', params });
     } catch (error) {
       console.error('Error fetching assessment:', error);
+      router.push({ pathname: '/result', params: assessment });
     }
   };
 
