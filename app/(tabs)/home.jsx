@@ -17,7 +17,7 @@ import { useAuth } from '../../components/AuthContext.jsx';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
-import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
+import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 
 export default function App() {
   const { user, session, avatar } = useAuth();
@@ -50,34 +50,7 @@ export default function App() {
 
   const loadHistory = async () => {
     try {
-      const data = await fetchAssessmentHistory();
-      // Handle both { assessments: [...] } and [...] formats
-      const list = data.assessments || (Array.isArray(data) ? data : []);
-      
-      const formatted = list.map((item, index) => {
-        // Handle created_at (new backend) vs timestamp (legacy)
-        const dateStr = item.created_at || item.timestamp;
-        
-        return {
-          id: item.assessment_id || item.id || String(index),
-          title: dateStr 
-            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
-            : `Assessment ${index + 1}`,
-          // Ensure we pass the date field expected by result screen
-          created_at: dateStr,
-          timestamp: dateStr,
-          ...item
-        };
-      });
-      
-      formatted.sort((a, b) => {
-        const dateA = a.created_at || a.timestamp;
-        const dateB = b.created_at || b.timestamp;
-        if (dateA && dateB) {
-          return new Date(dateB) - new Date(dateA);
-        }
-        return 0;
-      });
+      const formatted = await loadAssessmentHistory();
       setAssessments(formatted);
     } catch (error) {
       console.error('Failed to load history', error);
@@ -87,70 +60,11 @@ export default function App() {
   const handleSelectAssessment = async (assessment) => {
     try {
       setHistoryVisible(false);
-      
-      // Use created_at for the new backend structure
-      const lookupDate = assessment.created_at || assessment.timestamp;
-      
-      if (lookupDate) {
-        const fullResult = await fetchAssessmentResult(lookupDate);
-        
-        console.log("📥 Full result from backend:", JSON.stringify(fullResult, null, 2));
-        
-        // Flatten questionnaire data if it's nested
-        const questionnaire = fullResult.questionnaire || {};
-        
-        // Prepare params - stringify arrays/objects for router
-        const params = {
-          // ML Analysis fields
-          global_score: fullResult.global_score,
-          diagnosis: fullResult.diagnosis,
-          erythema: fullResult.erythema,
-          induration: fullResult.induration,
-          scaling: fullResult.scaling,
-          lesions_found: fullResult.lesions_found,
-          annotated_image_base64: fullResult.annotated_image_base64,
-          
-          // LLM recommendations - stringify arrays
-          next_steps: JSON.stringify(fullResult.next_steps || []),
-          additional_notes: fullResult.additional_notes,
-          
-          // Questionnaire fields (flattened)
-          gender: questionnaire.gender || fullResult.gender,
-          age: questionnaire.age || fullResult.age,
-          psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
-          location: JSON.stringify(questionnaire.location || fullResult.location || []),
-          appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
-          size: JSON.stringify(questionnaire.size || fullResult.size || []),
-          itching: questionnaire.itching || fullResult.itching || 0,
-          pain: questionnaire.pain || fullResult.pain || 0,
-          jointPain: questionnaire.jointPain || fullResult.jointPain,
-          jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
-          dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
-          currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
-          
-          // Metadata
-          assessment_id: fullResult.assessment_id,
-          created_at: fullResult.created_at,
-        };
-
-        router.push({
-          pathname: '/result',
-          params: params
-        });
-      } else {
-        // Fallback
-        router.push({
-          pathname: '/result',
-          params: assessment
-        });
-      }
+      const params = await getAssessmentForNavigation(assessment);
+      router.push({ pathname: '/result', params });
     } catch (error) {
-      console.error('Error fetching full assessment details:', error);
-      // Fallback to passing what we have
-      router.push({
-        pathname: '/result',
-        params: assessment
-      });
+      console.error('Error fetching assessment:', error);
+      router.push({ pathname: '/result', params: assessment });
     }
   };
 

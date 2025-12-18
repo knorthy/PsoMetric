@@ -286,7 +286,7 @@ Returns all assessments for a user, sorted by date (newest first):
 
 ```python
 @app.get("/analyze/history/{user_id}")
-async def get_history(user_id: str):
+async def get_history(user_id: str):    
     response = table.query(
         KeyConditionExpression=Key('user_id').eq(user_id),
         ScanIndexForward=False  # Newest first

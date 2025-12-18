@@ -1,7 +1,7 @@
 import { getAuthHeaders, getCurrentUser } from './cognito';
 
-// Updated to match the working IP from camera-welcome.jsx
-const BASE_URL = 'http://192.168.31.117:8000';
+// API URL from environment variable
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.68.109:8000';
 
 export const fetchAssessmentHistory = async () => {
   try {
