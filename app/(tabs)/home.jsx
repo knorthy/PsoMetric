@@ -17,10 +17,10 @@ import { useAuth } from '../../components/AuthContext.jsx';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
-import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
+import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 
 export default function App() {
-  const { user, session } = useAuth();
+  const { user, session, avatar } = useAuth();
 
   const formatName = (raw) => {
     if (!raw) return 'there';
@@ -50,19 +50,7 @@ export default function App() {
 
   const loadHistory = async () => {
     try {
-      const data = await fetchAssessmentHistory();
-      const list = Array.isArray(data) ? data : [];
-      const formatted = list.map((item, index) => ({
-        id: item.timestamp || String(index),
-        title: item.timestamp ? new Date(item.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : `Assessment ${index + 1}`,
-        ...item
-      }));
-      formatted.sort((a, b) => {
-        if (a.timestamp && b.timestamp) {
-          return new Date(b.timestamp) - new Date(a.timestamp);
-        }
-        return 0;
-      });
+      const formatted = await loadAssessmentHistory();
       setAssessments(formatted);
     } catch (error) {
       console.error('Failed to load history', error);
@@ -72,28 +60,11 @@ export default function App() {
   const handleSelectAssessment = async (assessment) => {
     try {
       setHistoryVisible(false);
-      // If the assessment object already has detailed fields, we might not need to fetch.
-      // But to be safe and ensure we have the full data as stored in DB:
-      if (assessment.timestamp) {
-        const fullResult = await fetchAssessmentResult(assessment.timestamp);
-        router.push({
-          pathname: '/result',
-          params: fullResult
-        });
-      } else {
-        // Fallback if no timestamp
-        router.push({
-          pathname: '/result',
-          params: assessment
-        });
-      }
+      const params = await getAssessmentForNavigation(assessment);
+      router.push({ pathname: '/result', params });
     } catch (error) {
-      console.error('Error fetching full assessment details:', error);
-      // Fallback to passing what we have
-      router.push({
-        pathname: '/result',
-        params: assessment
-      });
+      console.error('Error fetching assessment:', error);
+      router.push({ pathname: '/result', params: assessment });
     }
   };
 
@@ -110,11 +81,11 @@ export default function App() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-          <Image
-            source={require('../../assets/images/avatar.jpg')}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
+          {avatar ? (
+            <Image source={{ uri: avatar }} style={styles.avatar} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -273,6 +244,11 @@ const styles = StyleSheet.create({
   avatar: {
     width: '100%',
     height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
   },
 
   greeting: {

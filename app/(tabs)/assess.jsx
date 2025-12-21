@@ -17,29 +17,110 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
+import { useAuth } from '../../components/AuthContext';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
+import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function SymptomAssessmentScreen() {
   const { screen1, screen2, screen3, updateScreen1, updateScreen2, updateScreen3 } = useAssessment();
   const router = useRouter();
+  const { avatar } = useAuth();
 
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [assessments, setAssessments] = useState([]);
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
   const snapPoints = ["25%"];
 
   const HISTORY_SIDEBAR_WIDTH = 290;
 
+  // Load history when sidebar opens
+  useEffect(() => {
+    if (historyVisible) {
+      loadHistory();
+    }
+  }, [historyVisible]);
+
+  const loadHistory = async () => {
+    try {
+      const data = await fetchAssessmentHistory();
+      const list = data.assessments || (Array.isArray(data) ? data : []);
+      
+      const formatted = list.map((item, index) => {
+        const dateStr = item.created_at || item.timestamp;
+        return {
+          id: item.assessment_id || item.id || String(index),
+          title: dateStr 
+            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
+            : `Assessment ${index + 1}`,
+          created_at: dateStr,
+          timestamp: dateStr,
+          ...item
+        };
+      });
+      
+      formatted.sort((a, b) => {
+        const dateA = a.created_at || a.timestamp;
+        const dateB = b.created_at || b.timestamp;
+        if (dateA && dateB) {
+          return new Date(dateB) - new Date(dateA);
+        }
+        return 0;
+      });
+      setAssessments(formatted);
+    } catch (error) {
+      console.error('Failed to load history', error);
+    }
+  };
+
   const handleAvatarPress = useCallback(() => {
     sheetRef.current?.present();
     setisOpen(true);
   }, []);
 
-  const handleSelectAssessment = (assessment) => {
-    console.log('Selected assessment:', assessment);
-    setHistoryVisible(false);
+  const handleSelectAssessment = async (assessment) => {
+    try {
+      setHistoryVisible(false);
+      const lookupDate = assessment.created_at || assessment.timestamp;
+      
+      if (lookupDate) {
+        const fullResult = await fetchAssessmentResult(lookupDate);
+        const questionnaire = fullResult.questionnaire || {};
+        
+        router.push({
+          pathname: '/result',
+          params: {
+            global_score: fullResult.global_score,
+            diagnosis: fullResult.diagnosis,
+            erythema: fullResult.erythema,
+            induration: fullResult.induration,
+            scaling: fullResult.scaling,
+            lesions_found: fullResult.lesions_found,
+            annotated_image_base64: fullResult.annotated_image_base64,
+            next_steps: JSON.stringify(fullResult.next_steps || []),
+            additional_notes: fullResult.additional_notes,
+            gender: questionnaire.gender || fullResult.gender,
+            age: questionnaire.age || fullResult.age,
+            psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
+            location: JSON.stringify(questionnaire.location || fullResult.location || []),
+            appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
+            size: JSON.stringify(questionnaire.size || fullResult.size || []),
+            itching: questionnaire.itching || fullResult.itching || 0,
+            pain: questionnaire.pain || fullResult.pain || 0,
+            jointPain: questionnaire.jointPain || fullResult.jointPain,
+            jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
+            dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
+            currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
+            assessment_id: fullResult.assessment_id,
+            created_at: fullResult.created_at,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching assessment:', error);
+    }
   };
 
   // Close bottom sheet when navigating away (cleanup)
@@ -69,25 +150,25 @@ export default function SymptomAssessmentScreen() {
   const [jointsAffected, setJointsAffected] = useState([]);
   const [currentTreatment, setCurrentTreatment] = useState('');
 
-  // Load saved data
+  // Sync local state with context (handles both loading saved data and resetting after assessment)
   useEffect(() => {
-    // Screen 1
-    if (screen1.gender) setGender(screen1.gender);
-    if (screen1.age) setAge(screen1.Sage);
-    if (screen1.psoriasisHistory) setPsoriasisHistory(screen1.psoriasisHistory);
-    if (screen1.location?.length) setLocation(screen1.location);
-    if (screen1.appearance?.length) setAppearance(screen1.appearance);
-    if (screen1.size?.length) setSize(screen1.size);
+    // Screen 1 - Always sync with context values (empty strings/arrays after reset)
+    setGender(screen1.gender || '');
+    setAge(screen1.age || '');
+    setPsoriasisHistory(screen1.psoriasisHistory || '');
+    setLocation(screen1.location || []);
+    setAppearance(screen1.appearance || []);
+    setSize(screen1.size || []);
 
     // Screen 2
-    if (screen2.itching !== undefined) setItching(screen2.itching);
-    if (screen2.pain !== undefined) setPain(screen2.pain);
+    setItching(screen2.itching || 0);
+    setPain(screen2.pain || 0);
 
     // Screen 3
-    if (screen3.dailyImpact) setDailyImpact(screen3.dailyImpact);
-    if (screen3.jointPain) setJointPain(screen3.jointPain);
-    if (screen3.jointsAffected?.length) setJointsAffected(screen3.jointsAffected);
-    if (screen3.currentTreatment) setCurrentTreatment(screen3.currentTreatment);
+    setDailyImpact(screen3.dailyImpact || '');
+    setJointPain(screen3.jointPain || '');
+    setJointsAffected(screen3.jointsAffected || []);
+    setCurrentTreatment(screen3.currentTreatment || '');
   }, [screen1, screen2, screen3]);
 
   const toggle = (array, setArray, value) => {
@@ -129,7 +210,11 @@ export default function SymptomAssessmentScreen() {
               <Ionicons name="menu" size={28} color="#333" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-              <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} resizeMode="cover" />
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} resizeMode="cover" />
+              ) : (
+                <View style={styles.avatarPlaceholder} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -284,7 +369,7 @@ export default function SymptomAssessmentScreen() {
             </TouchableOpacity>
           )}
 
-          <History visible={historyVisible} onClose={() => setHistoryVisible(false)} onSelectAssessment={handleSelectAssessment} />
+          <History visible={historyVisible} onClose={() => setHistoryVisible(false)} onSelectAssessment={handleSelectAssessment} assessments={assessments} />
 
           <BottomSheetModal
             ref={sheetRef}
@@ -324,6 +409,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: { width: wp(9), height: wp(9), borderRadius: wp(5), overflow: 'hidden', borderWidth: 1, borderColor: '#ddd' },
   avatar: { width: '100%', height: '100%' },
+  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: 'transparent' },
   content: { flex: 1, paddingHorizontal: wp(6), paddingTop: hp(2) },
   greeting: { fontSize: hp(3), fontWeight: '600', color: '#007AFF', marginBottom: hp(3) },
   sectionTitle: { fontSize: hp(2.4), fontWeight: '600', color: '#333', marginTop: hp(3), marginBottom: hp(2) },

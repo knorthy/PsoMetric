@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
@@ -15,14 +15,47 @@ import {
   View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useAuth } from '../../components/AuthContext.jsx';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet.jsx';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
 import { getTempData } from '../../helpers/dataStore';
+import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
+  const router = useRouter();
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [assessments, setAssessments] = useState([]);
+
+  const { avatar } = useAuth();
+
+  // Load history when sidebar opens
+  useEffect(() => {
+    if (historyVisible) {
+      loadHistory();
+    }
+  }, [historyVisible]);
+
+  const loadHistory = async () => {
+    try {
+      const formatted = await loadAssessmentHistory();
+      setAssessments(formatted);
+    } catch (error) {
+      console.error('Failed to load history', error);
+    }
+  };
+
+  const handleSelectAssessment = async (assessment) => {
+    try {
+      setHistoryVisible(false);
+      const params = await getAssessmentForNavigation(assessment);
+      router.replace({ pathname: '/result', params });
+    } catch (error) {
+      console.error('Error fetching assessment:', error);
+      router.replace({ pathname: '/result', params: assessment });
+    }
+  };
 
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
@@ -35,63 +68,66 @@ export default function ResultScreen() {
     setisOpen(true);
   }, []);
 
-  // === All data from previous screens (passed via router.push params) ===
+  // === All data from questionnaire (single-page condensed version) ===
+  // Helper to parse arrays that may come as JSON strings from router params
+  const parseArray = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch (e) {
+        // Might be comma-separated
+        return val.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    return [];
+  };
+
   const {
-    // From assessment.jsx (page 1)
+    // Demographics
     gender,
     age,
-    psoriasis_history, // 'first' | 'recurrent'
-    location = [],           // array
-    appearance = [],         // array
-    size = [],               // array
-    nails = [],              // array
-    scalp = [],              // array
-
-    // From assess2.jsx (page 2)
-    onset_date,
-    symptom_pattern,         // 'continuous' | 'intermittent'
-    lesion_speed,            // 'gradual' | 'rapid'
-    itching = 0,
-    burning = 0,
-    pain = 0,
-    bleeding = 0,
-    worsen_at_night,         // 'yes' | 'no'
-    worsen_with_stress,      // 'yes' | 'no'
-    triggers = [],           // array
-    med_triggers = [],       // array
-    sunlight_effect,         // 'sunlight' | 'winter' | 'none'
-
-    // From assess3.jsx (page 3)
-    daily_impact,
-    emotional_impact,
-    relationships_impact,
-    joint_pain,              // 'yes' | 'no'
-    joints_affected = [],    // array
-    nail_with_joint,         // 'yes' | 'no'
-    past_treatments,
-    family_history = [],     // array
-    other_conditions = [],   // array
-    current_treatment,
-    relief_side_effects,
-    tried_systemic,          // 'yes' | 'no'
-    fever_infection,         // 'yes' | 'no'
-    weight_loss_fatigue,     // 'yes' | 'no'
-
-    // From assess4.jsx (camera) + photoguide
-    images,                  // string or array of URIs
-    pasi_score = '0',        // string from backend or calculated
+    psoriasisHistory,        // 'first' | 'recurrent'
     
-    // NEW: Backend questionnaire response with GenAI recommendations
-    questionnaireResult,     // JSON string from backend (legacy)
-    analysisResult,          // JSON string from ML model (legacy)
+    // Symptoms - Location & Appearance (may be JSON strings from router)
+    location: locationRaw,
+    appearance: appearanceRaw,
+    size: sizeRaw,
+    
+    // Severity Ratings
+    itching = 0,             // 0-10 slider
+    pain = 0,                // 0-10 slider
+    
+    // Impact & Joints
+    jointPain,               // 'yes' | 'no'
+    jointsAffected: jointsAffectedRaw,
+    dailyImpact,             // 'none' | 'mild' | 'moderate' | 'severe'
+    currentTreatment,        // string (free text)
+
+    // Image data
+    images,                  // string or array of URIs
+    
+    // Backend response
     resultId,                // ID to fetch data from store
+    
+    // Legacy/Fallback params
+    analysisResult,
+    questionnaireResult,
+    pasi_score = '0',
   } = params;
 
-  // === Retrieve Data from Store or Params ===
+  // Parse arrays from router params
+  const location = parseArray(locationRaw);
+  const appearance = parseArray(appearanceRaw);
+  const size = parseArray(sizeRaw);
+  const jointsAffected = parseArray(jointsAffectedRaw);
+
+  // === Retrieve Data from Store ===
   let mlAnalysis = null;
   let genAIRecommendations = null;
 
-  // 1. Try fetching from store first (preferred for large data)
   if (resultId) {
     const storedAnalysis = getTempData(`analysis_${resultId}`);
     const storedQuestionnaire = getTempData(`questionnaire_${resultId}`);
@@ -115,6 +151,34 @@ export default function ResultScreen() {
     } catch (e) {
       console.error('Failed to parse questionnaire result from params:', e);
     }
+  }
+
+  // 3. Construct from direct params (History/Backend response)
+  if (!mlAnalysis && (params.global_score !== undefined || params.diagnosis)) {
+    mlAnalysis = {
+      global_score: params.global_score,
+      diagnosis: params.diagnosis,
+      erythema: params.erythema,
+      induration: params.induration,
+      scaling: params.scaling,
+      lesions_found: params.lesions_found,
+      annotated_image_base64: params.annotated_image_base64,
+      // Handle potential legacy fields
+      details: params.details,
+    };
+  }
+
+  if (!genAIRecommendations && (params.next_steps || params.nextSteps)) {
+    // Handle array passed via params (might be stringified or array)
+    let steps = params.next_steps || params.nextSteps;
+    if (typeof steps === 'string' && steps.startsWith('[')) {
+      try { steps = JSON.parse(steps); } catch (e) {}
+    }
+    
+    genAIRecommendations = {
+      nextSteps: Array.isArray(steps) ? steps : [steps],
+      additionalNotes: params.additional_notes || params.additionalNotes,
+    };
   }
 
   // === DEBUG LOGS ===
@@ -141,9 +205,11 @@ export default function ResultScreen() {
 
   // Determine Scores from ML or Fallback to PASI
   // Backend returns: { global_score, details: { erythema, induration, scaling }, annotated_image_base64 }
-  const mlScore = mlAnalysis?.global_score || mlAnalysis?.score || mlAnalysis?.severity_score || parseFloat(pasi_score) || 0;
+  const rawScore = mlAnalysis?.global_score ?? mlAnalysis?.score ?? mlAnalysis?.severity_score ?? pasi_score ?? 0;
+  const mlScore = parseFloat(rawScore) || 0;
+  
   // Check if we have a valid analysis result (even if score is 0, e.g. "Clear")
-  const hasResult = !!mlAnalysis || parseFloat(pasi_score) > 0;
+  const hasResult = !!mlAnalysis || mlScore > 0;
   const hasScore = hasResult;
   const displayScore = hasResult ? mlScore.toFixed(1) : '—';
   
@@ -246,7 +312,11 @@ export default function ResultScreen() {
               <Ionicons name="menu" size={30} color="#333" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-              <Image source={require('../../assets/images/avatar.jpg')} style={styles.avatar} />
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -339,7 +409,6 @@ export default function ResultScreen() {
         </View>
 
         {/* Patient Context */}
-        {/* Patient Context */}
         <Text style={styles.sectionTitle}>Patient Context</Text>
         <View style={styles.quickFacts}>
           <View style={styles.factBox}>
@@ -352,11 +421,11 @@ export default function ResultScreen() {
           </View>
           <View style={styles.factBox}>
             <Text style={styles.factLabel}>Impact</Text>
-            <Text style={styles.factValue}>{show(daily_impact, 'Not specified')}</Text>
+            <Text style={styles.factValue}>{show(dailyImpact, 'Not specified')}</Text>
           </View>
           <View style={styles.factBox}>
             <Text style={styles.factLabel}>Joint Pain</Text>
-            <Text style={styles.factValue}>{yesNo(joint_pain) === 'Yes' ? 'Present' : 'Not specified'}</Text>
+            <Text style={styles.factValue}>{jointPain === 'yes' ? 'Present' : 'None'}</Text>
           </View>
         </View>
 
@@ -366,18 +435,15 @@ export default function ResultScreen() {
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Location</Text><Text style={styles.detailValue}>{list(location)}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Gender</Text><Text style={styles.detailValue}>{show(gender, '-')}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Age</Text><Text style={styles.detailValue}>{show(age, '-')}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>History of Psoriasis</Text><Text style={styles.detailValue}>{show(psoriasis_history, 'Not specified')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>History</Text><Text style={styles.detailValue}>{psoriasisHistory === 'first' ? 'First onset' : psoriasisHistory === 'recurrent' ? 'Recurrent' : 'Not specified'}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Appearance</Text><Text style={styles.detailValue}>{list(appearance)}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Size</Text><Text style={styles.detailValue}>{list(size)}</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Itching Level</Text><Text style={styles.detailValue}>{show(itching, '0')}/10</Text></View>
           <View style={styles.detailRow}><Text style={styles.detailLabel}>Pain Level</Text><Text style={styles.detailValue}>{show(pain, '0')}/10</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Bleeding</Text><Text style={styles.detailValue}>{show(bleeding, '0')}/10</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Triggers</Text><Text style={styles.detailValue}>{list(triggers)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Stress Factor</Text><Text style={styles.detailValue}>{yesNo(worsen_with_stress)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Daily Impact</Text><Text style={styles.detailValue}>{show(daily_impact, 'Not specified')}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joint Pain</Text><Text style={styles.detailValue}>{yesNo(joint_pain)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joints Affected</Text><Text style={styles.detailValue}>{list(joints_affected)}</Text></View>
-          <View style={styles.detailRow}><Text style={styles.detailLabel}>Current Treatment</Text><Text style={styles.detailValue}>{show(current_treatment, 'None')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Daily Impact</Text><Text style={styles.detailValue}>{show(dailyImpact, 'Not specified')}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joint Pain</Text><Text style={styles.detailValue}>{jointPain === 'yes' ? 'Yes' : jointPain === 'no' ? 'No' : 'Not specified'}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Joints Affected</Text><Text style={styles.detailValue}>{list(jointsAffected)}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Current Treatment</Text><Text style={styles.detailValue}>{show(currentTreatment, 'None')}</Text></View>
         </View>
 
         {/* Recommendations */}
@@ -401,7 +467,7 @@ export default function ResultScreen() {
               <Text style={styles.recItem}>• Continue moisturizing daily with fragrance-free emollients</Text>
               <Text style={styles.recItem}>• Consider topical corticosteroids or vitamin D analogues</Text>
               <Text style={styles.recItem}>• Avoid known triggers: stress, smoking, alcohol</Text>
-              {joint_pain === 'yes' && <Text style={styles.recItem}>• Discuss possible psoriatic arthritis with your doctor</Text>}
+              {jointPain === 'yes' && <Text style={styles.recItem}>• Discuss possible psoriatic arthritis with your doctor</Text>}
             </>
           ) : (
             <Text style={{
@@ -433,7 +499,12 @@ export default function ResultScreen() {
 
     </SafeAreaView>
 
-    <History visible={historyVisible} onClose={() => setHistoryVisible(false)} />
+    <History
+      visible={historyVisible}
+      onClose={() => setHistoryVisible(false)}
+      onSelectAssessment={handleSelectAssessment}
+      assessments={assessments}
+    />
 
     <BottomSheetModal
       ref={sheetRef}
@@ -493,6 +564,7 @@ const styles = StyleSheet.create({
     width: '100%', 
     height: '100%' 
   },
+  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: 'transparent' },
 
   pageTitle: {
     fontSize: hp(3.4),

@@ -3,22 +3,24 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, Bottom
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../components/AuthContext';
 import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { hp, wp } from '../../helpers/common';
+import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 // Image sets with captions
 const howToTakeImages = [
@@ -38,22 +40,101 @@ const whatToUploadImages = [
 export default function CameraWelcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { avatar } = useAuth();
   const questionnaireParams = useLocalSearchParams();
   const [uploading] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [assessments, setAssessments] = useState([]);
 
   const sheetRef = useRef(null);
   const [isOpen, setisOpen] = useState(false);
   const snapPoints = ["25%"];
+
+  // Load history when sidebar opens
+  useEffect(() => {
+    if (historyVisible) {
+      loadHistory();
+    }
+  }, [historyVisible]);
+
+  const loadHistory = async () => {
+    try {
+      const data = await fetchAssessmentHistory();
+      const list = data.assessments || (Array.isArray(data) ? data : []);
+      
+      const formatted = list.map((item, index) => {
+        const dateStr = item.created_at || item.timestamp;
+        return {
+          id: item.assessment_id || item.id || String(index),
+          title: dateStr 
+            ? new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) 
+            : `Assessment ${index + 1}`,
+          created_at: dateStr,
+          timestamp: dateStr,
+          ...item
+        };
+      });
+      
+      formatted.sort((a, b) => {
+        const dateA = a.created_at || a.timestamp;
+        const dateB = b.created_at || b.timestamp;
+        if (dateA && dateB) {
+          return new Date(dateB) - new Date(dateA);
+        }
+        return 0;
+      });
+      setAssessments(formatted);
+    } catch (error) {
+      console.error('Failed to load history', error);
+    }
+  };
 
   const handleAvatarPress = useCallback(() => {
     sheetRef.current?.present();
     setisOpen(true);
   }, []);
 
-  const handleSelectAssessment = (assessment) => {
-    console.log('Selected assessment:', assessment);
-    setHistoryVisible(false); 
+  const handleSelectAssessment = async (assessment) => {
+    try {
+      setHistoryVisible(false);
+      const lookupDate = assessment.created_at || assessment.timestamp;
+      
+      if (lookupDate) {
+        const fullResult = await fetchAssessmentResult(lookupDate);
+        const questionnaire = fullResult.questionnaire || {};
+        
+        router.push({
+          pathname: '/result',
+          params: {
+            global_score: fullResult.global_score,
+            diagnosis: fullResult.diagnosis,
+            erythema: fullResult.erythema,
+            induration: fullResult.induration,
+            scaling: fullResult.scaling,
+            lesions_found: fullResult.lesions_found,
+            annotated_image_base64: fullResult.annotated_image_base64,
+            next_steps: JSON.stringify(fullResult.next_steps || []),
+            additional_notes: fullResult.additional_notes,
+            gender: questionnaire.gender || fullResult.gender,
+            age: questionnaire.age || fullResult.age,
+            psoriasisHistory: questionnaire.psoriasisHistory || fullResult.psoriasisHistory,
+            location: JSON.stringify(questionnaire.location || fullResult.location || []),
+            appearance: JSON.stringify(questionnaire.appearance || fullResult.appearance || []),
+            size: JSON.stringify(questionnaire.size || fullResult.size || []),
+            itching: questionnaire.itching || fullResult.itching || 0,
+            pain: questionnaire.pain || fullResult.pain || 0,
+            jointPain: questionnaire.jointPain || fullResult.jointPain,
+            jointsAffected: JSON.stringify(questionnaire.jointsAffected || fullResult.jointsAffected || []),
+            dailyImpact: questionnaire.dailyImpact || fullResult.dailyImpact,
+            currentTreatment: questionnaire.currentTreatment || fullResult.currentTreatment,
+            assessment_id: fullResult.assessment_id,
+            created_at: fullResult.created_at,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching assessment:', error);
+    }
   };
 
   // Close bottom sheet when navigating away
@@ -96,11 +177,11 @@ export default function CameraWelcome() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-          <Image
-            source={require('../../assets/images/avatar.jpg')}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
+          {avatar ? (
+            <Image source={{ uri: avatar }} style={styles.avatar} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -176,6 +257,7 @@ export default function CameraWelcome() {
         visible={historyVisible}
         onClose={() => setHistoryVisible(false)}
         onSelectAssessment={handleSelectAssessment}
+        assessments={assessments}
       />
 
       <BottomSheetModal
@@ -229,6 +311,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   avatar: { width: '100%', height: '100%' },
+  avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: 'transparent' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: wp(6), paddingBottom: hp(20) },
   headerTitle: { fontSize: hp(3.5), fontWeight: '700', marginBottom: hp(3), marginTop: hp(0.1) },

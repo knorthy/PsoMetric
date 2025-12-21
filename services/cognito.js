@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  AuthenticationDetails,
-  CognitoUser,
-  CognitoUserAttribute,
-  CognitoUserPool
+    AuthenticationDetails,
+    CognitoUser,
+    CognitoUserAttribute,
+    CognitoUserPool
 } from 'amazon-cognito-identity-js';
 import 'react-native-get-random-values';
 import amplifyconfig from '../amplifyconfiguration.json';
@@ -270,7 +270,8 @@ export const getAuthHeaders = async () => {
   try {
     const user = await getCurrentUser();
     return {
-      Authorization: `Bearer ${user.idToken}`
+      Authorization: `Bearer ${user.idToken}`,
+      'X-User-ID': user.userId
     };
   } catch (error) {
     return {};

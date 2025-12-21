@@ -5,15 +5,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -25,7 +25,7 @@ import { changePassword, deleteCurrentUser, updateUserAttributes } from '../../s
 const ViewProfileScreen = () => {
   const navigation = useNavigation();
   const router = useRouter();
-  const { user: authUser, session, checkAuthStatus, logout, setAuth } = useAuth();
+  const { user: authUser, session, checkAuthStatus, logout, setAuth, avatar, setAvatar } = useAuth();
 
   const sheetRef = useRef(null);
   const snapPoints = ["25%"];
@@ -74,7 +74,12 @@ const ViewProfileScreen = () => {
       setUser((u) => ({ ...u, username: authUser.username || '' }));
       setEditedUser((e) => ({ ...e, username: authUser.username || '' }));
     }
-  }, [session, authUser]);
+    // If global avatar exists, populate local states
+    if (avatar) {
+      setUser((u) => ({ ...u, avatar: { uri: avatar } }));
+      setEditedUser((e) => ({ ...e, avatar: { uri: avatar } }));
+    }
+  }, [session, authUser, avatar]);
 
   const handleSave = () => {
     // Basic validation for password fields
@@ -106,6 +111,15 @@ const ViewProfileScreen = () => {
         const refreshed = await (async () => {
           try { return session; } catch { return null; }
         })();
+
+        // If the user changed/added an avatar, persist it globally
+        try {
+          if (editedUser.avatar && editedUser.avatar.uri) {
+            await setAvatar(editedUser.avatar.uri);
+          }
+        } catch (e) {
+          console.error('Failed to persist avatar after save', e);
+        }
 
         setIsEditing(false);
         setShowChangePassword(false);
