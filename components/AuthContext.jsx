@@ -57,6 +57,8 @@ export const AuthProvider = ({ children }) => {
       await signOut();
       setUser(null);
       setSession(null);
+      // Clear assessment data on logout
+      await AsyncStorage.removeItem('@psometric_assessment');
       console.log('✅ User signed out');
     } catch (error) {
       console.error('Sign out error:', error);

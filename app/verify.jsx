@@ -1,18 +1,18 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 
-import ScreenWrapper from '../../components/ScreenWrapper';
-import { hp, wp } from '../../helpers/common';
-import { confirmSignUp, resendSignUpCode } from '../../services/cognito';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { hp, wp } from '../helpers/common';
+import { confirmSignUp, resendSignUpCode } from '../services/cognito';
 
 const VerifyScreen = () => {
   const router = useRouter();

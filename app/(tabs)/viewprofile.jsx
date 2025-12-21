@@ -2,18 +2,18 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, Bottom
 import { useNavigation } from '@react-navigation/native';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -25,6 +25,7 @@ import { changePassword, deleteCurrentUser, updateUserAttributes } from '../../s
 const ViewProfileScreen = () => {
   const navigation = useNavigation();
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams();
   const { user: authUser, session, checkAuthStatus, logout, setAuth, avatar, setAvatar } = useAuth();
 
   const sheetRef = useRef(null);
@@ -244,18 +245,32 @@ const ViewProfileScreen = () => {
     ]);
   };
 
+  const handleGoBack = () => {
+    if (returnTo) {
+      // Navigate back to the page we came from
+      router.replace(returnTo);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/home');
+    }
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <SafeAreaView style={styles.container}>
           {/* Fixed Header */}
           <View style={styles.fixedHeader}>
-        {isEditing && (
+        {isEditing ? (
           <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
             <Icon name="arrow-back" size={28} color="#000" />
           </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+            <Icon name="arrow-back" size={28} color="#000" />
+          </TouchableOpacity>
         )}
-        {!isEditing && <View style={styles.backButton} />}
 
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle} numberOfLines={1}>

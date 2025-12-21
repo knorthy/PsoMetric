@@ -4,26 +4,26 @@ import { useCallback, useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
-  Easing,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue
+    Easing,
+    interpolate,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue
 } from 'react-native-reanimated';
-import SignupBottomSheet from '../../components/SignupBottomSheet.jsx';
-import { hp, wp } from '../../helpers/common';
+import SignupBottomSheet from '../components/SignupBottomSheet.jsx';
+import { hp, wp } from '../helpers/common';
 
 //testing lang para endi mag duplicate skia
-const GradientBackground = require('../../components/GradientBackground.jsx').default;
+const GradientBackground = require('../components/GradientBackground.jsx').default;
 
 const ITEM_WIDTH = wp(80);
 const ITEM_SPACING = wp(10);
 
 const data = [
-  { image: require('../../assets/images/welcome/img3.png') },
-  { image: require('../../assets/images/welcome/img2.png') },
-  { image: require('../../assets/images/welcome/img1.png') },
-  { image: require('../../assets/images/welcome/img4.png') },
+  { image: require('../assets/images/welcome/img3.png') },
+  { image: require('../assets/images/welcome/img2.png') },
+  { image: require('../assets/images/welcome/img1.png') },
+  { image: require('../assets/images/welcome/img4.png') },
 ];
 
 export default function Welcome() {

@@ -24,9 +24,16 @@ import { hp, wp } from '../../helpers/common';
 import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/api';
 
 export default function SymptomAssessmentScreen() {
-  const { screen1, screen2, screen3, updateScreen1, updateScreen2, updateScreen3 } = useAssessment();
+  const { screen1, screen2, screen3, updateScreen1, updateScreen2, updateScreen3, resetAssessment } = useAssessment();
   const router = useRouter();
-  const { avatar } = useAuth();
+  const { avatar, user, session } = useAuth();
+  const hasResetRef = useRef(false);
+
+  // Format name for greeting (capitalize first letter)
+  const formatName = (name) => {
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
 
   const [historyVisible, setHistoryVisible] = useState(false);
   const [assessments, setAssessments] = useState([]);
@@ -35,6 +42,14 @@ export default function SymptomAssessmentScreen() {
   const snapPoints = ["25%"];
 
   const HISTORY_SIDEBAR_WIDTH = 290;
+
+  // Reset assessment data when screen first mounts (start fresh)
+  useEffect(() => {
+    if (!hasResetRef.current) {
+      resetAssessment();
+      hasResetRef.current = true;
+    }
+  }, []);
 
   // Load history when sidebar opens
   useEffect(() => {
@@ -229,7 +244,7 @@ export default function SymptomAssessmentScreen() {
               if (historyVisible) setHistoryVisible(false);
             }}
           >
-            <Text style={styles.greeting}>Hello, let's assess your psoriasis</Text>
+            <Text style={styles.greeting}>Hello, {formatName(session?.name || user?.username)}! Let's assess your psoriasis.</Text>
 
             {/* Demographics */}
             <Text style={styles.sectionTitle}>About You</Text>

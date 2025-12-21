@@ -1,16 +1,18 @@
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from './AuthContext';
 
 export default function AvatarBottomSheet({ onPick, onClose }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { logout } = useAuth();
 
   const handleViewProfile = () => {
     onClose?.();
     // keep callback for compatibility
     onPick?.('viewProfile');
-    router.push('/viewprofile');
+    // Pass the current route so viewprofile knows where to go back to
+    router.push({ pathname: '/(tabs)/viewprofile', params: { returnTo: pathname } });
   };
 
   const handleLogout = async () => {

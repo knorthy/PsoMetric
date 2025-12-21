@@ -2,17 +2,17 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import ScreenWrapper from '../../components/ScreenWrapper';
-import GradientBackground from '../../components/invertedGB';
-import { hp, wp } from '../../helpers/common';
-import { signUp } from '../../services/cognito';
+import ScreenWrapper from '../components/ScreenWrapper';
+import GradientBackground from '../components/invertedGB';
+import { hp, wp } from '../helpers/common';
+import { signUp } from '../services/cognito';
 
 const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
 const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
@@ -197,13 +197,13 @@ const SignUpScreen = () => {
 
           <View style={styles.socialRow}>
             <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Google' })}>
-              <Image source={require('../../assets/images/googlelogo.png')} style={styles.socialIcon} />
+              <Image source={require('../assets/images/googlelogo.png')} style={styles.socialIcon} />
             </Pressable>
             <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Facebook' })}>
-              <Image source={require('../../assets/images/fblogo.png')} style={styles.socialIcon} />
+              <Image source={require('../assets/images/fblogo.png')} style={styles.socialIcon} />
             </Pressable>
             <Pressable style={styles.socialBtn} onPress={() => signInWithRedirect({ provider: 'Twitter' })}>
-              <Image source={require('../../assets/images/twitterlogo.png')} style={styles.socialIcon} />
+              <Image source={require('../assets/images/twitterlogo.png')} style={styles.socialIcon} />
             </Pressable>
           </View>
 

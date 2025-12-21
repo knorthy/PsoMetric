@@ -2,21 +2,21 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
-import { useAuth } from '../../components/AuthContext';
-import Loading from '../../components/Loading';
-import ScreenWrapper from '../../components/ScreenWrapper';
-import GradientBackground from '../../components/invertedGB';
-import { hp, wp } from '../../helpers/common';
-import { signIn } from '../../services/cognito';
+import { useAuth } from '../components/AuthContext';
+import Loading from '../components/Loading';
+import ScreenWrapper from '../components/ScreenWrapper';
+import GradientBackground from '../components/invertedGB';
+import { hp, wp } from '../helpers/common';
+import { signIn } from '../services/cognito';
 
 const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
 const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
@@ -66,7 +66,7 @@ const SignIn = () => {
               {
                 text: 'Verify Now',
                 onPress: () => router.push({
-                  pathname: '/(tabs)/verify',
+                  pathname: '/verify',
                   params: { email: email.trim().toLowerCase() }
                 })
               }
