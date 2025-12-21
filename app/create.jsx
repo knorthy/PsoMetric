@@ -4,15 +4,14 @@ import { useState } from 'react';
 import {
   Image,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import GradientBackground from '../components/invertedGB';
-import { hp, wp } from '../helpers/common';
 import { signUp } from '../services/cognito';
+import styles from '../styles/createStyles';
 
 const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)';
 const PLACEHOLDER_COLOR_ACTIVE = 'rgba(255, 255, 255, 0.9)';
@@ -218,104 +217,5 @@ const SignUpScreen = () => {
     </ScreenWrapper>
   );
 };
-
-const styles = StyleSheet.create({
-  wrapper: { flex: 1, position: 'relative' },
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: hp(5),
-    paddingHorizontal: wp(10),
-  },
-  title: {
-    fontSize: wp(7),
-    fontWeight: 'bold',
-    color: '#ffffffff',
-    marginBottom: hp(4),
-  },
-  inputGroup: { width: '100%', marginBottom: hp(1.5) },
-  label: { fontSize: wp(4), color: '#ffffffff', marginBottom: hp(0.8) },
-  input: {
-    height: hp(6),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 12,
-    paddingHorizontal: wp(4),
-    fontSize: wp(4.2),
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  passwordWrapper: {
-    height: hp(6),
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(4),
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  passwordInput: {
-    flex: 1,
-    fontSize: wp(4.2),
-    color: '#fff',
-  },
-  eye: { padding: wp(2) },
-  inputError: { borderColor: '#ff4444', borderWidth: 1.5 },
-  inputValid: { borderColor: '#00C853', borderWidth: 1.5 },
-  errorText: { color: '#ff4444', fontSize: wp(3.6), marginTop: hp(0.5) },
-
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '84%',
-    marginVertical: hp(1.5),
-  },
-  customCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#999',
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(4),
-  },
-  customCheckboxChecked: {
-    backgroundColor: '#0085FF',
-    borderColor: '#0085FF',
-  },
-  checkboxLabel: { fontSize: wp(3.8), color: '#333', flex: 1 },
-  linkText: { color: '#0085FF', fontWeight: '500' },
-
-  button: {
-    width: '80%',
-    height: hp(5.5),
-    backgroundColor: '#0085FF',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: hp(1),
-  },
-  buttonText: { color: 'white', fontSize: wp(4), fontWeight: '600' },
-  orText: { marginVertical: hp(2), color: '#666', fontSize: wp(4) },
-  socialRow: { flexDirection: 'row', justifyContent: 'center', gap: wp(5), marginBottom: hp(4) },
-  socialBtn: {
-    width: 45,
-    height: 45,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  socialIcon: { width: 25, height: 25 },
-  footerText: { fontSize: wp(4.2), color: '#666' },
-  loginLink: { color: '#0085FF', fontWeight: 'bold' },
-});
 
 export default SignUpScreen;
