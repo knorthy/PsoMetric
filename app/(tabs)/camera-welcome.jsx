@@ -26,7 +26,7 @@ import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
 import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 
 // API URL from environment variable (.env file)
-const BACKEND_ANALYZE_URL = `${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.68.109:8000'}/analyze/`;
+const BACKEND_ANALYZE_URL = `${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.117:8000'}/analyze/`;
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
