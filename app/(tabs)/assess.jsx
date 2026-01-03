@@ -4,14 +4,14 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
@@ -112,7 +112,7 @@ export default function SymptomAssessmentScreen() {
             induration: fullResult.induration,
             scaling: fullResult.scaling,
             lesions_found: fullResult.lesions_found,
-            annotated_image_base64: fullResult.annotated_image_base64,
+            annotated_image_url: fullResult.annotated_image_url,
             next_steps: JSON.stringify(fullResult.next_steps || []),
             additional_notes: fullResult.additional_notes,
             gender: questionnaire.gender || fullResult.gender,

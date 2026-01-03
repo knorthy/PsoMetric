@@ -3,14 +3,14 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, Bottom
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAuth } from '../../components/AuthContext.jsx';
@@ -161,7 +161,7 @@ export default function ResultScreen() {
       induration: params.induration,
       scaling: params.scaling,
       lesions_found: params.lesions_found,
-      annotated_image_base64: params.annotated_image_base64,
+      annotated_image_url: params.annotated_image_url,
       // Handle potential legacy fields
       details: params.details,
     };
@@ -291,10 +291,16 @@ export default function ResultScreen() {
 
   const imageList = images ? (Array.isArray(images) ? images : [images]) : [];
   // Choose annotated image and original image
-  const annotatedImage = mlAnalysis?.annotated_image_base64 || mlAnalysis?.annotated_image || mlAnalysis?.annotated_image_url;
+  const annotatedImage = mlAnalysis?.annotated_image_url;
   const originalImage = imageList[0];
+  
+  // Debug image URLs
+  console.log("🖼️ Annotated Image URL:", annotatedImage);
+  console.log("🖼️ Original Image:", originalImage);
+  
   // Show annotated image when overlay enabled and annotated image exists, otherwise show original upload
   const displayImage = (showOverlay && annotatedImage) ? annotatedImage : (originalImage || annotatedImage || null);
+  console.log("🖼️ Display Image:", displayImage);
 
   // Parse backend questionnaire response
   // (Already handled above via store or params)

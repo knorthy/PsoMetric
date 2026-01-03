@@ -1,7 +1,7 @@
 import { getAuthHeaders, getCurrentUser } from './cognito';
 
 // Backend API URL (hardcoded)
-const BASE_URL = 'http://192.168.68.101:8000';
+const BASE_URL = 'http://3.106.203.241:8000';
 
 // Get presigned S3 URL for image upload
 export const getPresignedUploadUrl = async (fileName, fileType) => {

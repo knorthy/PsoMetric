@@ -58,7 +58,7 @@ export const prepareResultParams = (fullResult) => {
     induration: fullResult.induration,
     scaling: fullResult.scaling,
     lesions_found: fullResult.lesions_found,
-    annotated_image_base64: fullResult.annotated_image_base64,
+    annotated_image_url: fullResult.annotated_image_url,
     
     // LLM recommendations (stringify arrays for router)
     next_steps: JSON.stringify(fullResult.next_steps || []),

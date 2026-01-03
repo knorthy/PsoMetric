@@ -111,7 +111,7 @@ export default function CameraWelcome() {
             induration: fullResult.induration,
             scaling: fullResult.scaling,
             lesions_found: fullResult.lesions_found,
-            annotated_image_base64: fullResult.annotated_image_base64,
+            annotated_image_url: fullResult.annotated_image_url,
             next_steps: JSON.stringify(fullResult.next_steps || []),
             additional_notes: fullResult.additional_notes,
             gender: questionnaire.gender || fullResult.gender,

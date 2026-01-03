@@ -20,12 +20,11 @@ import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { setTempData } from '../../helpers/dataStore';
 import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
-import { getPresignedUploadUrl, uploadImageToS3 } from '../../services/api';
 import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 import styles from '../../styles/cameraWelcomeStyles';
 
 // Backend API URL (hardcoded)
-const BACKEND_ANALYZE_URL = 'http://192.168.68.101:8000/analyze/';
+const BACKEND_ANALYZE_URL = 'http://3.106.203.241:8000/analyze/';
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
@@ -140,37 +139,39 @@ export default function CameraWelcome() {
         return;
       }
 
-      // 3. Upload image to S3 first
-      console.log("📤 Getting presigned URL for S3 upload...");
-      const { uploadUrl, imageUrl } = await getPresignedUploadUrl(fileName, type);
+      // 3. Create FormData with image and questionnaire
+      const formData = new FormData();
       
-      console.log("⬆️ Uploading image to S3...");
-      await uploadImageToS3(uploadUrl, uri, type);
-      console.log("✅ Image uploaded to S3:", imageUrl);
+      // Add image file
+      formData.append('file', {
+        uri: uri,
+        name: fileName,
+        type: type,
+      });
 
-      // 4. Send questionnaire with S3 image URL (smaller payload)
+      // Add questionnaire as JSON string (backend will parse)
       const questionnairePayload = {
         ...questionnaireData,
-        // S3 image URL instead of file blob
-        image_url: imageUrl,
         // Add user info (both camelCase and snake_case to be safe)
         userId: cognitoAuth.userId,
         user_id: cognitoAuth.userId,
         username: cognitoAuth.username,
       };
+      
+      formData.append('questionnaire_data', JSON.stringify(questionnairePayload));
 
       console.log("🚀 Uploading to:", BACKEND_ANALYZE_URL);
       console.log("📤 Payload:", JSON.stringify(questionnairePayload, null, 2));
 
-      // 5. Send request with S3 URL (with timeout)
+      // 4. Send request with image + questionnaire (with timeout)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
       const response = await fetch(BACKEND_ANALYZE_URL, {
         method: 'POST',
-        body: JSON.stringify(questionnairePayload),
+        body: formData,
         headers: {
-          'Content-Type': 'application/json',
+          // Don't set Content-Type for FormData - browser sets it with boundary
           ...authHeaders,
         },
         signal: controller.signal,
@@ -204,7 +205,7 @@ export default function CameraWelcome() {
         induration: data.induration,
         scaling: data.scaling,
         lesions_found: data.lesions_found,
-        annotated_image_base64: data.annotated_image_base64,
+        annotated_image_url: data.annotated_image_url,
       });
       
       // LLM-generated recommendations
