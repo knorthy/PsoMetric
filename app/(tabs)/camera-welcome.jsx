@@ -24,7 +24,7 @@ import { getAssessmentForNavigation, loadAssessmentHistory } from '../../service
 import styles from '../../styles/cameraWelcomeStyles';
 
 // Backend API URL (hardcoded)
-const BACKEND_ANALYZE_URL = 'http://3.106.203.241:8000/analyze/';
+const BACKEND_ANALYZE_URL = 'http://3.24.100.128:8000/analyze/';
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
