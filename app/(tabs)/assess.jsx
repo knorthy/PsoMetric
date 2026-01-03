@@ -4,14 +4,14 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAssessment } from '../../components/AssessmentContext';
@@ -23,7 +23,7 @@ import { fetchAssessmentHistory, fetchAssessmentResult } from '../../services/ap
 import styles from '../../styles/assessStyles';
 
 export default function SymptomAssessmentScreen() {
-  const { screen1, screen2, screen3, updateScreen1, updateScreen2, updateScreen3, resetAssessment } = useAssessment();
+  const { assessment, updateAssessment, resetAssessment } = useAssessment();
   const router = useRouter();
   const { avatar, user, session } = useAuth();
   const hasResetRef = useRef(false);
@@ -166,24 +166,19 @@ export default function SymptomAssessmentScreen() {
 
   // Sync local state with context (handles both loading saved data and resetting after assessment)
   useEffect(() => {
-    // Screen 1 - Always sync with context values (empty strings/arrays after reset)
-    setGender(screen1.gender || '');
-    setAge(screen1.age || '');
-    setPsoriasisHistory(screen1.psoriasisHistory || '');
-    setLocation(screen1.location || []);
-    setAppearance(screen1.appearance || []);
-    setSize(screen1.size || []);
-
-    // Screen 2
-    setItching(screen2.itching || 0);
-    setPain(screen2.pain || 0);
-
-    // Screen 3
-    setDailyImpact(screen3.dailyImpact || '');
-    setJointPain(screen3.jointPain || '');
-    setJointsAffected(screen3.jointsAffected || []);
-    setCurrentTreatment(screen3.currentTreatment || '');
-  }, [screen1, screen2, screen3]);
+    setGender(assessment.gender || '');
+    setAge(assessment.age || '');
+    setPsoriasisHistory(assessment.psoriasisHistory || '');
+    setLocation(assessment.location || []);
+    setAppearance(assessment.appearance || []);
+    setSize(assessment.size || []);
+    setItching(assessment.itching || 0);
+    setPain(assessment.pain || 0);
+    setDailyImpact(assessment.dailyImpact || '');
+    setJointPain(assessment.jointPain || '');
+    setJointsAffected(assessment.jointsAffected || []);
+    setCurrentTreatment(assessment.currentTreatment || '');
+  }, [assessment]);
 
   const toggle = (array, setArray, value) => {
     setArray(array.includes(value) ? array.filter(v => v !== value) : [...array, value]);
@@ -373,9 +368,7 @@ export default function SymptomAssessmentScreen() {
             <TouchableOpacity
               style={styles.fab}
               onPress={() => {
-                updateScreen1({ gender, age, psoriasisHistory, location, appearance, size });
-                updateScreen2({ itching, pain });
-                updateScreen3({ dailyImpact, jointPain, jointsAffected, currentTreatment });
+                updateAssessment({ gender, age, psoriasisHistory, location, appearance, size, itching, pain, dailyImpact, jointPain, jointsAffected, currentTreatment });
                 router.push('/photoguide');
               }}
             >

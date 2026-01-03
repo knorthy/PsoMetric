@@ -20,11 +20,12 @@ import AvatarBottomSheet from '../../components/AvatarBottomSheet';
 import History from '../../components/history';
 import { setTempData } from '../../helpers/dataStore';
 import { getAuthHeaders, getCurrentUser } from '../../services/cognito';
+import { getPresignedUploadUrl, uploadImageToS3 } from '../../services/api';
 import { getAssessmentForNavigation, loadAssessmentHistory } from '../../services/historyUtils';
 import styles from '../../styles/cameraWelcomeStyles';
 
-// API URL from environment variable (.env file)
-const BACKEND_ANALYZE_URL = `${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.117:8000'}/analyze/`;
+// Backend API URL (hardcoded)
+const BACKEND_ANALYZE_URL = 'http://192.168.68.101:8000/analyze/';
 
 export default function CameraWelcome() {
   const { getFullQuestionnaire, resetAssessment } = useAssessment();
@@ -127,8 +128,7 @@ export default function CameraWelcome() {
       console.log("📋 Questionnaire Data:", JSON.stringify(questionnaireData, null, 2));
 
       // Validate questionnaire has data
-      const hasQuestionnaireData = questionnaireData && 
-        (questionnaireData.screen1 || questionnaireData.screen2 || questionnaireData.screen3);
+      const hasQuestionnaireData = questionnaireData && questionnaireData.gender;
       
       if (!hasQuestionnaireData) {
         Alert.alert(
@@ -140,42 +140,43 @@ export default function CameraWelcome() {
         return;
       }
 
-      // 3. Create FormData with BOTH image and questionnaire
-      const formData = new FormData();
+      // 3. Upload image to S3 first
+      console.log("📤 Getting presigned URL for S3 upload...");
+      const { uploadUrl, imageUrl } = await getPresignedUploadUrl(fileName, type);
       
-      // Add image file
-      formData.append('file', {
-        uri: uri,
-        name: fileName,
-        type: type,
-      });
+      console.log("⬆️ Uploading image to S3...");
+      await uploadImageToS3(uploadUrl, uri, type);
+      console.log("✅ Image uploaded to S3:", imageUrl);
 
-      // Add questionnaire as JSON string (backend will parse)
+      // 4. Send questionnaire with S3 image URL (smaller payload)
       const questionnairePayload = {
-        // Flatten all screens into single object
-        ...questionnaireData.screen1,
-        ...questionnaireData.screen2,
-        ...questionnaireData.screen3,
+        ...questionnaireData,
+        // S3 image URL instead of file blob
+        image_url: imageUrl,
         // Add user info (both camelCase and snake_case to be safe)
         userId: cognitoAuth.userId,
         user_id: cognitoAuth.userId,
         username: cognitoAuth.username,
       };
-      
-      formData.append('questionnaire_data', JSON.stringify(questionnairePayload));
 
       console.log("🚀 Uploading to:", BACKEND_ANALYZE_URL);
       console.log("📤 Payload:", JSON.stringify(questionnairePayload, null, 2));
 
-      // 4. Send SINGLE request with both image + questionnaire
+      // 5. Send request with S3 URL (with timeout)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
       const response = await fetch(BACKEND_ANALYZE_URL, {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify(questionnairePayload),
         headers: {
-          // 'Content-Type': 'multipart/form-data', // ❌ Don't set manually
+          'Content-Type': 'application/json',
           ...authHeaders,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const responseText = await response.text();
       console.log("📥 Server Response:", responseText);

@@ -1,7 +1,56 @@
 import { getAuthHeaders, getCurrentUser } from './cognito';
 
-// API URL from environment variable
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.117:8000';
+// Backend API URL (hardcoded)
+const BASE_URL = 'http://192.168.68.101:8000';
+
+// Get presigned S3 URL for image upload
+export const getPresignedUploadUrl = async (fileName, fileType) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${BASE_URL}/analyze/presigned-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ fileName, fileType }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get presigned URL: ${response.status}`);
+    }
+
+    return await response.json(); // { uploadUrl, imageUrl }
+  } catch (error) {
+    console.error('Error getting presigned URL:', error);
+    throw error;
+  }
+};
+
+// Upload image directly to S3 using presigned URL
+export const uploadImageToS3 = async (presignedUrl, imageUri, fileType) => {
+  try {
+    const response = await fetch(imageUri);
+    const blob = await response.blob();
+
+    const uploadResponse = await fetch(presignedUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': fileType,
+      },
+      body: blob,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`S3 upload failed: ${uploadResponse.status}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error uploading to S3:', error);
+    throw error;
+  }
+};
 
 export const fetchAssessmentHistory = async () => {
   try {

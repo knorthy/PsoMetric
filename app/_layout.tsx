@@ -24,6 +24,7 @@ export default function RootLayout() {
       <AssessmentProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="welcome" options={{ headerShown: false }} />
             <Stack.Screen name="signin" options={{ headerShown: false }} />
             <Stack.Screen name="create" options={{ headerShown: false }} />
