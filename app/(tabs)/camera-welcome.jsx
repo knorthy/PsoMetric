@@ -183,7 +183,24 @@ export default function CameraWelcome() {
       console.log("📥 Server Response:", responseText);
 
       if (!response.ok) {
-        throw new Error(`Server Error ${response.status}: ${responseText}`);
+        // Try to parse the error response to get the detail message
+        let errorMessage = 'An error occurred while analyzing the image.';
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // If parsing fails, use the raw response text if it's short enough
+          if (responseText && responseText.length < 200) {
+            errorMessage = responseText;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = JSON.parse(responseText);
@@ -229,7 +246,21 @@ export default function CameraWelcome() {
 
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Analysis Failed', 'Could not connect to the server. Check your IP and Wi-Fi.');
+      
+      // Determine appropriate error title and message
+      let errorTitle = 'Analysis Failed';
+      let errorMessage = error.message || 'An unknown error occurred.';
+      
+      // Check for specific error types
+      if (error.name === 'AbortError') {
+        errorTitle = 'Request Timeout';
+        errorMessage = 'The request took too long. Please check your internet connection and try again.';
+      } else if (error.message?.includes('Network request failed') || error.message?.includes('fetch')) {
+        errorTitle = 'Connection Error';
+        errorMessage = 'Could not connect to the server. Please check your internet connection.';
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setUploading(false);
     }

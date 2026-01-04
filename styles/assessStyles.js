@@ -36,6 +36,8 @@ const styles = StyleSheet.create({
   checkboxLabel: { fontSize: hp(1.8), color: '#666' },
   checkboxLabelSelected: { color: '#007AFF', fontWeight: '500' },
   textInput: { backgroundColor: '#F2F2F7', borderRadius: 12, paddingHorizontal: wp(4), paddingVertical: hp(1.8), fontSize: hp(1.8) },
+  textInputError: { borderWidth: 1, borderColor: '#FF3B30' },
+  errorText: { color: '#FF3B30', fontSize: hp(1.5), marginTop: hp(0.5), marginLeft: wp(1) },
   sliderContainer: { gap: hp(3) },
   sliderRow: { flexDirection: 'row', justifyContent: 'space-between' },
   sliderLabel: { fontSize: hp(1.9), color: '#333' },

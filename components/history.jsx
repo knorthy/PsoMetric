@@ -1,21 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  BackHandler,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 290;
-
-const PLACEHOLDER_ASSESSMENTS = [];
 
 export default function History({
   visible = false,
@@ -24,29 +25,74 @@ export default function History({
   assessments = [],
 }) {
   const router = useRouter(); 
-  const slideAnim = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredAssessments, setFilteredAssessments] = useState([]);
+  const [shouldRender, setShouldRender] = useState(false);
   
   // Memoize assessments to prevent unnecessary re-renders
   const memoizedAssessments = useMemo(() => assessments, [JSON.stringify(assessments)]);
-  
-  useEffect(() => {
-  if (!visible) {
-    setSearchQuery('');
-  }
-}, [visible]);
 
+  // Handle Android back button
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: visible ? 0 : -SIDEBAR_WIDTH,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 12,
-    }).start();
+    if (Platform.OS === 'android' && visible) {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        onClose?.();
+        return true;
+      });
+      return () => backHandler.remove();
+    }
+  }, [visible, onClose]);
+  
+  // Reset search when closing
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery('');
+    }
   }, [visible]);
 
+  // Handle visibility and animations
+  useEffect(() => {
+    if (visible) {
+      setShouldRender(true);
+      // Animate in
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(overlayAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Animate out
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: -SIDEBAR_WIDTH,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(overlayAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Only unmount after animation completes
+        setShouldRender(false);
+      });
+    }
+  }, [visible]);
+
+  // Filter assessments based on search
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredAssessments(memoizedAssessments);
@@ -60,53 +106,54 @@ export default function History({
     }
   }, [searchQuery, memoizedAssessments]);
 
-  if (!visible && slideAnim._value <= -SIDEBAR_WIDTH + 10) return null;
+  // Safe close handler
+  const handleClose = useCallback(() => {
+    onClose?.();
+  }, [onClose]);
 
-  const handleItemPress = (item) => {
+  const handleItemPress = useCallback((item) => {
     onSelectAssessment?.(item);
     setSearchQuery('');
-  };
+    handleClose();
+  }, [onSelectAssessment, handleClose]);
 
-  const clearSearch = () => setSearchQuery('');
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
 
- 
-const handleAssessNew = () => {
-  onClose(); 
-  router.push('/home');
-};
+  const handleAssessNew = useCallback(() => {
+    handleClose();
+    // Small delay to let the sidebar close smoothly before navigation
+    setTimeout(() => {
+      router.push('/home');
+    }, 100);
+  }, [handleClose, router]);
+
+  // Don't render if not needed
+  if (!shouldRender && !visible) return null;
 
   return (
     <>
-    {/* Dark Overlay */}
-{visible && (
-  <TouchableOpacity
-    activeOpacity={1}
-    onPress={onClose}
-    style={[
-      StyleSheet.absoluteFillObject,
-      { paddingLeft: SIDEBAR_WIDTH } 
-    ]}
-  >
-    <Animated.View
-      style={{
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#000',
-        opacity: slideAnim.interpolate({
-          inputRange: [-SIDEBAR_WIDTH, 0],
-          outputRange: [0, 0.5],
-        }),
-      }}
-    />
-  </TouchableOpacity>
-)}
+      {/* Dark Overlay - using TouchableWithoutFeedback for reliable touch handling */}
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.overlay,
+            {
+              opacity: overlayAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.5],
+              }),
+            },
+          ]}
+          pointerEvents={visible ? 'auto' : 'none'}
+        />
+      </TouchableWithoutFeedback>
 
       {/* Sidebar */}
       <Animated.View
-  style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
-  pointerEvents={visible ? 'auto' : 'none'}
-  onStartShouldSetResponder={() => true}  
-  onResponderGrant={(e) => e.stopPropagation()} 
->
+        style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
+        pointerEvents={visible ? 'auto' : 'none'}
+      >
         <View style={styles.content}>
           <View style={styles.headerSection}>
             <View style={styles.searchContainer}>
@@ -190,6 +237,11 @@ const handleAssessNew = () => {
 
 /* Styles */
 const styles = StyleSheet.create({
+  overlay: {
+    backgroundColor: '#000',
+    zIndex: 9998,
+  },
+  
   sidebar: {
     position: 'absolute',
     left: 0,

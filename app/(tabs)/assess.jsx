@@ -4,6 +4,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -184,6 +185,74 @@ export default function SymptomAssessmentScreen() {
     setArray(array.includes(value) ? array.filter(v => v !== value) : [...array, value]);
   };
 
+  // Age validation - only allow valid ages (1-120)
+  const handleAgeChange = (text) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (numericText === '') {
+      setAge('');
+      return;
+    }
+    const ageNum = parseInt(numericText, 10);
+    // Limit to 3 digits and max 120
+    if (numericText.length <= 3 && ageNum <= 120) {
+      setAge(numericText);
+    }
+  };
+
+  // Validate age is within acceptable range
+  const isValidAge = (ageStr) => {
+    if (!ageStr || ageStr.trim() === '') return false;
+    const ageNum = parseInt(ageStr, 10);
+    return !isNaN(ageNum) && ageNum >= 1 && ageNum <= 120;
+  };
+
+  // Validate all required fields and return missing ones
+  const validateForm = () => {
+    const missingFields = [];
+    
+    if (!gender) missingFields.push('Gender');
+    if (!isValidAge(age)) missingFields.push('Age (must be 1-120)');
+    if (!psoriasisHistory) missingFields.push('History of Psoriasis');
+    if (location.length === 0) missingFields.push('Location');
+    if (appearance.length === 0) missingFields.push('Appearance');
+    if (size.length === 0) missingFields.push('Size of affected areas');
+    if (!jointPain) missingFields.push('Joint pain question');
+    if (jointPain === 'yes' && jointsAffected.length === 0) missingFields.push('Joints affected');
+    if (!dailyImpact) missingFields.push('Daily impact');
+    
+    return missingFields;
+  };
+
+  // Handle proceed to next page with validation
+  const handleProceed = () => {
+    const missingFields = validateForm();
+    
+    if (missingFields.length > 0) {
+      Alert.alert(
+        'Incomplete Assessment',
+        `Please complete the following fields:\n\n• ${missingFields.join('\n• ')}`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    updateAssessment({ 
+      gender, 
+      age, 
+      psoriasisHistory, 
+      location, 
+      appearance, 
+      size, 
+      itching, 
+      pain, 
+      dailyImpact, 
+      jointPain, 
+      jointsAffected, 
+      currentTreatment 
+    });
+    router.push('/photoguide');
+  };
+
   const MultiSelect = ({ label, value, selected, onPress }) => (
     <TouchableOpacity
       style={[styles.checkbox, selected && styles.checkboxSelected]}
@@ -254,12 +323,16 @@ export default function SymptomAssessmentScreen() {
             <View style={styles.section}>
               <Text style={styles.label}>Age</Text>
               <TextInput
-                style={styles.textInput}
-                placeholder="Enter your age"
+                style={[styles.textInput, age && !isValidAge(age) && styles.textInputError]}
+                placeholder="Enter your age (1-120)"
                 keyboardType="numeric"
                 value={age}
-                onChangeText={t => setAge(t.replace(/[^0-9]/g, ''))}
+                onChangeText={handleAgeChange}
+                maxLength={3}
               />
+              {age && !isValidAge(age) && (
+                <Text style={styles.errorText}>Please enter a valid age (1-120)</Text>
+              )}
             </View>
 
             <View style={styles.section}>
@@ -367,10 +440,7 @@ export default function SymptomAssessmentScreen() {
           {!isOpen && (
             <TouchableOpacity
               style={styles.fab}
-              onPress={() => {
-                updateAssessment({ gender, age, psoriasisHistory, location, appearance, size, itching, pain, dailyImpact, jointPain, jointsAffected, currentTreatment });
-                router.push('/photoguide');
-              }}
+              onPress={handleProceed}
             >
               <Ionicons name="chevron-forward" size={28} color="#FFFFFF" />
             </TouchableOpacity>
