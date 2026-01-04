@@ -85,6 +85,35 @@ const styles = StyleSheet.create({
     color: '#0085FF',
     fontWeight: 'bold',
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingBox: {
+    backgroundColor: '#fff',
+    paddingVertical: hp(4),
+    paddingHorizontal: wp(10),
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  loadingText: {
+    marginTop: hp(2),
+    fontSize: wp(4),
+    color: '#333',
+    fontWeight: '500',
+  },
 });
 
 export default styles;

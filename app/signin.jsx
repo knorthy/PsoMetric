@@ -2,16 +2,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
-import Loading from '../components/Loading';
 import ScreenWrapper from '../components/ScreenWrapper';
 import GradientBackground from '../components/invertedGB';
 import { signIn } from '../services/cognito';
@@ -38,6 +37,10 @@ const SignIn = () => {
     }
 
     setLoading(true);
+    
+    // Small delay to ensure loading UI renders before API call
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     try {
       console.log('🔐 Signing in:', email);
       
@@ -163,8 +166,17 @@ const SignIn = () => {
           </Text>
         </Text>
       </ScrollView>
-      {loading && <Loading />}
       </View>
+      
+      {/* Full screen loading overlay during sign-in */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Signing in...</Text>
+          </View>
+        </View>
+      )}
     </ScreenWrapper>
   );
 };
