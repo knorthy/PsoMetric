@@ -3,7 +3,9 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, Bottom
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -28,6 +30,22 @@ export default function ResultScreen() {
   const [assessments, setAssessments] = useState([]);
 
   const { avatar } = useAuth();
+
+  // Handle back button - navigate to home instead of previous screen
+  const handleBackToHome = useCallback(() => {
+    router.replace('/home');
+  }, [router]);
+
+  // Handle Android hardware back button
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleBackToHome();
+        return true; // Prevent default back behavior
+      });
+      return () => backHandler.remove();
+    }
+  }, [handleBackToHome]);
 
   // Load history when sidebar opens
   useEffect(() => {
@@ -313,9 +331,14 @@ export default function ResultScreen() {
 
           {/* Top Bar */}
           <View style={styles.topBar}>
-            <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
-              <Ionicons name="menu" size={30} color="#333" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity hitSlop={20} onPress={handleBackToHome} style={{ marginRight: 16 }}>
+                <Ionicons name="chevron-back" size={28} color="#333" />
+              </TouchableOpacity>
+              <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
+                <Ionicons name="menu" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
