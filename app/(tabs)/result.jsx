@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from "@gorhom/bottom-sheet";
+import * as Print from 'expo-print';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   BackHandler,
   Image,
   Platform,
@@ -24,7 +27,7 @@ import { getAssessmentForNavigation, loadAssessmentHistory } from '../../service
 import styles from '../../styles/resultStyles';
 
 export default function ResultScreen() {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams()
   const router = useRouter();
   const [historyVisible, setHistoryVisible] = useState(false);
   const [assessments, setAssessments] = useState([]);
@@ -85,6 +88,9 @@ export default function ResultScreen() {
     setisOpen(true);
   }, []);
 
+  //  PDF Generation State 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   // === All data from questionnaire (single-page condensed version) ===
   // Helper to parse arrays that may come as JSON strings from router params
   const parseArray = (val) => {
@@ -141,7 +147,7 @@ export default function ResultScreen() {
   const size = parseArray(sizeRaw);
   const jointsAffected = parseArray(jointsAffectedRaw);
 
-  // === Retrieve Data from Store ===
+  //  Retrieve Data from Store 
   let mlAnalysis = null;
   let genAIRecommendations = null;
 
@@ -198,7 +204,7 @@ export default function ResultScreen() {
     };
   }
 
-  // === DEBUG LOGS ===
+  // DEBUG LOGS 
   console.log("=== RESULT SCREEN DATA ===");
   console.log("Result ID:", resultId);
   console.log("ML Analysis found:", !!mlAnalysis);
@@ -209,7 +215,7 @@ export default function ResultScreen() {
   }
   console.log("GenAI Recommendations found:", !!genAIRecommendations);
 
-  // === Helper Functions ===
+  //  Helper Functions 
   const show = (value, fallback = 'Not provided') => value || fallback;
   const yesNo = (value) => (value === 'yes' ? 'Yes' : value === 'no' ? 'No' : 'Not specified');
   const list = (arr) => {
@@ -323,6 +329,417 @@ export default function ResultScreen() {
   // Parse backend questionnaire response
   // (Already handled above via store or params)
 
+  // === PDF Generation Functions ===
+  const generatePdfHtml = () => {
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    // Prepare next steps HTML
+    let nextStepsHtml = '';
+    if (genAIRecommendations && genAIRecommendations.nextSteps) {
+      nextStepsHtml = genAIRecommendations.nextSteps
+        .map(step => `<li>${step}</li>`)
+        .join('');
+    } else if (hasScore) {
+      nextStepsHtml = `
+        <li>Continue moisturizing daily with fragrance-free emollients</li>
+        <li>Consider topical corticosteroids or vitamin D analogues</li>
+        <li>Avoid known triggers: stress, smoking, alcohol</li>
+        ${jointPain === 'yes' ? '<li>Discuss possible psoriatic arthritis with your doctor</li>' : ''}
+      `;
+    }
+
+    // Get the image for PDF (use base64 or URL)
+    let imageHtml = '';
+    if (displayImage) {
+      const imageSrc = displayImage.startsWith('http') || displayImage.startsWith('file') 
+        ? displayImage 
+        : `data:image/jpeg;base64,${displayImage}`;
+      imageHtml = `
+        <div class="image-section">
+          <h3>Lesion Analysis Image</h3>
+          <img src="${imageSrc}" alt="Lesion Analysis" style="max-width: 100%; max-height: 300px; border-radius: 8px; margin: 10px 0;" />
+          <p class="image-caption">Detected ${mlAnalysis?.lesions_found || mlAnalysis?.lesion_count || 'multiple'} lesion(s)</p>
+        </div>
+      `;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>PsoMetric Assessment Report</title>
+          <style>
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              padding: 40px;
+              color: #333;
+              line-height: 1.6;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #007AFF;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              color: #007AFF;
+              font-size: 28px;
+              margin-bottom: 5px;
+            }
+            .header p {
+              color: #666;
+              font-size: 14px;
+            }
+            .score-card {
+              background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+              color: white;
+              padding: 30px;
+              border-radius: 16px;
+              text-align: center;
+              margin-bottom: 25px;
+            }
+            .score-card .score {
+              font-size: 56px;
+              font-weight: bold;
+            }
+            .score-card .out-of {
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            .severity-badge {
+              display: inline-block;
+              background: rgba(255,255,255,0.2);
+              padding: 8px 20px;
+              border-radius: 20px;
+              margin-top: 15px;
+              font-weight: 600;
+            }
+            .section {
+              margin-bottom: 25px;
+            }
+            .section h2 {
+              color: #007AFF;
+              font-size: 18px;
+              border-bottom: 1px solid #e0e0e0;
+              padding-bottom: 8px;
+              margin-bottom: 15px;
+            }
+            .section h3 {
+              color: #333;
+              font-size: 16px;
+              margin-bottom: 10px;
+            }
+            .symptom-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 10px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .symptom-bar {
+              height: 8px;
+              background: #e0e0e0;
+              border-radius: 4px;
+              width: 60%;
+              margin-left: 15px;
+            }
+            .symptom-fill {
+              height: 100%;
+              border-radius: 4px;
+            }
+            .detail-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+            }
+            .detail-item {
+              padding: 10px;
+              background: #f8f9fa;
+              border-radius: 8px;
+            }
+            .detail-item .label {
+              font-size: 12px;
+              color: #666;
+              text-transform: uppercase;
+            }
+            .detail-item .value {
+              font-size: 14px;
+              font-weight: 600;
+              color: #333;
+            }
+            .recommendations {
+              background: #f0f8ff;
+              padding: 20px;
+              border-radius: 12px;
+              border-left: 4px solid #007AFF;
+            }
+            .recommendations ul {
+              padding-left: 20px;
+            }
+            .recommendations li {
+              margin-bottom: 8px;
+            }
+            .additional-notes {
+              background: #fff9e6;
+              padding: 15px;
+              border-radius: 8px;
+              margin-top: 15px;
+              border-left: 4px solid #FF9F0A;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e0e0e0;
+              text-align: center;
+              font-size: 12px;
+              color: #999;
+            }
+            .disclaimer {
+              background: #fff3f3;
+              padding: 15px;
+              border-radius: 8px;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #666;
+              border-left: 4px solid #FF3B30;
+            }
+            .image-section {
+              text-align: center;
+              margin: 20px 0;
+            }
+            .image-caption {
+              font-size: 12px;
+              color: #666;
+              margin-top: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🔬 PsoMetric</h1>
+            <p>Psoriasis Assessment Report</p>
+            <p>Generated on: ${currentDate}</p>
+          </div>
+
+          <div class="score-card">
+            <p style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Global Severity Score</p>
+            <p class="score">${displayScore}</p>
+            <p class="out-of">out of ${maxScore.toFixed(1)}</p>
+            <div class="severity-badge">
+              ${hasScore ? (severity.text === 'Clear' ? 'No Psoriasis Detected' : severity.text + ' Psoriasis') : 'Assessment Incomplete'}
+            </div>
+          </div>
+
+          ${imageHtml}
+
+          <div class="section">
+            <h2>Symptom Breakdown</h2>
+            <div class="symptom-row">
+              <span>Erythema (Redness)</span>
+              <span><strong>${erythema}/4</strong></span>
+              <div class="symptom-bar">
+                <div class="symptom-fill" style="width: ${(erythema/4)*100}%; background: #FF3B30;"></div>
+              </div>
+            </div>
+            <div class="symptom-row">
+              <span>Induration (Thickness)</span>
+              <span><strong>${induration}/4</strong></span>
+              <div class="symptom-bar">
+                <div class="symptom-fill" style="width: ${(induration/4)*100}%; background: #007AFF;"></div>
+              </div>
+            </div>
+            <div class="symptom-row">
+              <span>Desquamation (Scaling)</span>
+              <span><strong>${scaling}/4</strong></span>
+              <div class="symptom-bar">
+                <div class="symptom-fill" style="width: ${(scaling/4)*100}%; background: #8E8E93;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Patient Information</h2>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <p class="label">Age</p>
+                <p class="value">${show(age, 'Not provided')}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Gender</p>
+                <p class="value">${show(gender, 'Not provided')}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">History</p>
+                <p class="value">${psoriasisHistory === 'first' ? 'First onset' : psoriasisHistory === 'recurrent' ? 'Recurrent' : 'Not specified'}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Daily Impact</p>
+                <p class="value">${show(dailyImpact, 'Not specified')}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Joint Pain</p>
+                <p class="value">${jointPain === 'yes' ? 'Yes' : jointPain === 'no' ? 'No' : 'Not specified'}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Current Treatment</p>
+                <p class="value">${show(currentTreatment, 'None')}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Lesion Details</h2>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <p class="label">Location</p>
+                <p class="value">${list(location)}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Appearance</p>
+                <p class="value">${list(appearance)}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Size</p>
+                <p class="value">${list(size)}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Joints Affected</p>
+                <p class="value">${list(jointsAffected)}</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Itching Level</p>
+                <p class="value">${show(itching, '0')}/10</p>
+              </div>
+              <div class="detail-item">
+                <p class="label">Pain Level</p>
+                <p class="value">${show(pain, '0')}/10</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Recommendations & Next Steps</h2>
+            <div class="recommendations">
+              <ul>
+                ${nextStepsHtml || '<li>Complete your assessment to receive personalized recommendations.</li>'}
+              </ul>
+            </div>
+            ${genAIRecommendations?.additionalNotes ? `
+              <div class="additional-notes">
+                <strong>Additional Notes:</strong>
+                <p>${genAIRecommendations.additionalNotes}</p>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="disclaimer">
+            <strong>⚠️ Medical Disclaimer:</strong> This report is generated by AI for informational purposes only and should not be considered as medical advice. Please consult with a qualified healthcare professional for proper diagnosis and treatment of psoriasis or any other medical condition.
+          </div>
+
+          <div class="footer">
+            <p>Generated by PsoMetric App</p>
+            <p>© ${new Date().getFullYear()} PsoMetric. All rights reserved.</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  // Handle Save as PDF
+  const handleSaveAsPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      
+      const html = generatePdfHtml();
+      
+      // Generate PDF file
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
+      
+      console.log('PDF generated at:', uri);
+      
+      // Check if sharing is available
+      if (await Sharing.isAvailableAsync()) {
+        Alert.alert(
+          'PDF Generated',
+          'Your assessment report has been saved. Would you like to save it to your device or share it?',
+          [
+            {
+              text: 'Share/Save',
+              onPress: () => Sharing.shareAsync(uri, {
+                mimeType: 'application/pdf',
+                dialogTitle: 'Save PsoMetric Report',
+                UTI: 'com.adobe.pdf',
+              }),
+            },
+            {
+              text: 'Done',
+              style: 'cancel',
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Success', 'PDF has been generated successfully!');
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      Alert.alert('Error', 'Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Handle Share Report
+  const handleShareReport = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Sharing Unavailable', 'Sharing is not available on this device.');
+        return;
+      }
+
+      const html = generatePdfHtml();
+      
+      // Generate PDF file
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
+      
+      console.log('PDF for sharing generated at:', uri);
+      
+      // Share the PDF
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Share PsoMetric Assessment Report',
+        UTI: 'com.adobe.pdf',
+      });
+      
+    } catch (error) {
+      console.error('Error sharing report:', error);
+      Alert.alert('Error', 'Failed to share report. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
@@ -332,9 +749,6 @@ export default function ResultScreen() {
           {/* Top Bar */}
           <View style={styles.topBar}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity hitSlop={20} onPress={handleBackToHome} style={{ marginRight: 16 }}>
-                <Ionicons name="chevron-back" size={28} color="#333" />
-              </TouchableOpacity>
               <TouchableOpacity hitSlop={20} onPress={() => setHistoryVisible(true)}>
                 <Ionicons name="menu" size={28} color="#333" />
               </TouchableOpacity>
@@ -515,13 +929,21 @@ export default function ResultScreen() {
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.btnSecondary}>
+        <TouchableOpacity 
+          style={[styles.btnSecondary, isGeneratingPdf && { opacity: 0.6 }]} 
+          onPress={handleSaveAsPdf}
+          disabled={isGeneratingPdf}
+        >
           <Ionicons name="download-outline" size={22} color="#007AFF" />
-          <Text style={styles.btnTextSecondary}>Save as PDF</Text>
+          <Text style={styles.btnTextSecondary}>{isGeneratingPdf ? 'Generating...' : 'Save as PDF'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnPrimary}>
+        <TouchableOpacity 
+          style={[styles.btnPrimary, isGeneratingPdf && { opacity: 0.6 }]} 
+          onPress={handleShareReport}
+          disabled={isGeneratingPdf}
+        >
           <Ionicons name="share-social-outline" size={22} color="#fff" />
-          <Text style={styles.btnTextPrimary}>Share Report</Text>
+          <Text style={styles.btnTextPrimary}>{isGeneratingPdf ? 'Generating...' : 'Share Report'}</Text>
         </TouchableOpacity>
       </View>
 
